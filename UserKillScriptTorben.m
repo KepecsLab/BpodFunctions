@@ -279,6 +279,13 @@ end
 
 end
 
+function Table = Times2Table(TimesCell,t)
+Table = zeros(length(TimesCell),t*1000);
+for i = 1 : length(TimesCell)
+    Table(i,ceil(TimesCell{i}*1000)) = 1;
+end
+end
+
 %Compute CTA
 %2nd dim of E has to be "time"
 function [cta2,t] = CTA(E,idx,win)
