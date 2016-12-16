@@ -3,7 +3,7 @@ function UserKillScriptTorben
 
 global BpodSystem
 
-MailAddress = 'olrin.f6cfd9@m.evernote.com';
+MailAddress = 'xxx@m.evernote.com';
 
 %save figure
 FigureFolder = fullfile(fileparts(fileparts(BpodSystem.DataPath)),'Session Figures');
@@ -307,3 +307,34 @@ end
 t = -T:win:T-1;
 end
 
+% sends mail from Torben's cshl gmail account
+% 3 or  4 inputs: address,subject,message,cell with attachment paths
+% (each as string)
+function SendMyMail(varargin)
+
+setpref('Internet','E_mail','torben.cshl@gmail.com')
+setpref('Internet','SMTP_Server','smtp.gmail.com')
+setpref('Internet','SMTP_Username','torben.cshl@gmail.com')
+setpref('Internet','SMTP_Password','xxx')
+props = java.lang.System.getProperties;
+props.setProperty('mail.smtp.auth','true');
+props.setProperty('mail.smtp.socketFactory.class', 'javax.net.ssl.SSLSocketFactory');
+props.setProperty('mail.smtp.socketFactory.port','465');
+
+if length(varargin)==3
+    try
+        sendmail(varargin{1},varargin{2},varargin{3})
+    catch
+        display('Error:SendMyMail:E-Mail could not be sent.')
+    end
+elseif length(varargin)==4
+    try
+        sendmail(varargin{1},varargin{2},varargin{3},varargin{4})
+    catch
+        display('Error:SendMyMail:E-Mail could not be sent.')
+    end
+else
+    display('Error:SendMyMail:Number of input arguments wrong.')
+end
+
+end
