@@ -57,11 +57,14 @@ function FigHandle = Analysis()
 global TaskParameters
 global BpodSystem
 
-GracePeriodsMax = 0.25;%only corrects for this grace period
-
-MinWT = TaskParameters.GUI.VevaiometricMinWT;
+GracePeriodsMax = TaskParameters.GUI.FeedbackDelayGrace; %assumes same for each trial
+StimTime = TaskParameters.GUI.AuditoryStimulusTime; %assumes same for each trial
+MinWT = TaskParameters.GUI.VevaiometricMinWT; %assumes same for each trial
 MaxWT = 10;
-AudBinWT = 6;
+AudBin = 8; %Bins for psychometric
+AudBinWT = 6;%Bins for vevaiometric
+windowCTA = 150; %window for CTA (ms)
+
 [~,Animal]=fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -87,6 +90,7 @@ RightClickTrain = BpodSystem.Data.Custom.RightClickTrain(1:nTrials-1);
 %     catch --> always (if choice happened)
 
 CompletedTrials = (Feedback&Correct==1) | (Correct==0) | CatchTrial&~isnan(ChoiceLeft);
+nTrialsCompleted = sum(CompletedTrials);
 
 %calculate exerienced dv
 ExperiencedDV=zeros(1,length(ST));
@@ -116,7 +120,6 @@ FigHandle = figure('Position',[ 360         187        1056         431],'Number
 subplot(2,4,1)
 hold on
 AudDV = ExperiencedDV(CompletedTrials);
-AudBin = 8;
 if ~isempty(AudDV)
     BinIdx = discretize(AudDV,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBin+1));
     PsycY = grpstats(ChoiceLeft(CompletedTrials),BinIdx,'mean');
@@ -126,7 +129,7 @@ if ~isempty(AudDV)
     YFit = glmval(glmfit(AudDV,ChoiceLeft(CompletedTrials)','binomial'),linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100),'logit');
     plot(XFit,YFit,'k');
     xlabel('DV');ylabel('%left')
-    text(0.95*min(get(gca,'XLim')),0.96*max(get(gca,'YLim')),[num2str(round(nanmean(Correct(CompletedTrials))*100)/100),'%']);
+    text(0.95*min(get(gca,'XLim')),0.96*max(get(gca,'YLim')),[num2str(round(nanmean(Correct(CompletedTrials))*100)/100),'%,n=',num2str(nTrialsCompleted)]);
 end
 
 %conditioned psychometric
@@ -137,7 +140,6 @@ WTmed=median(WT(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT));
 AudDV = ExperiencedDV(CompletedTrials&CatchTrial&WT<=WTmed&WT>MinWT);
 if ~isempty(AudDV)
     ChoiceLeftadj = ChoiceLeft(CompletedTrials&CatchTrial&WT<=WTmed&WT>MinWT);
-    AudBin = 8;
     BinIdx = discretize(AudDV,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBin+1));
     PsycY = grpstats(ChoiceLeftadj,BinIdx,'mean');
     PsycX = grpstats(AudDV,BinIdx,'mean');
@@ -148,7 +150,6 @@ if ~isempty(AudDV)
     %high
     AudDV = ExperiencedDV(CompletedTrials&CatchTrial&WT>WTmed&WT<MaxWT);
     ChoiceLeftadj = ChoiceLeft(CompletedTrials&CatchTrial&WT>WTmed&WT<MaxWT);
-    AudBin = 8;
     BinIdx = discretize(AudDV,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBin+1));
     PsycY = grpstats(ChoiceLeftadj,BinIdx,'mean');
     PsycX = grpstats(AudDV,BinIdx,'mean');
@@ -231,14 +232,13 @@ subplot(2,4,8)
 hold on
 Index50Fifty = abs(DV)< .1;
 if sum(Index50Fifty)>1
-    LData = Times2Table(LeftClickTrain(CompletedTrials&Index50Fifty),3);
-    RData = Times2Table(RightClickTrain(CompletedTrials&Index50Fifty),3);
+    LData = Times2Table(LeftClickTrain(CompletedTrials&Index50Fifty),StimTime);
+    RData = Times2Table(RightClickTrain(CompletedTrials&Index50Fifty),StimTime);
     ChoiceLeftadj = ChoiceLeft(CompletedTrials&Index50Fifty);
-    window = 150;
-    [cta_chosenL,~]=CTA(LData(ChoiceLeftadj==1,:),ceil(ST(CompletedTrials&Index50Fifty&ChoiceLeft==1)*1000),window);
-    [cta_chosenR,~]=CTA(RData(ChoiceLeftadj==0,:),ceil(ST(CompletedTrials&Index50Fifty&ChoiceLeft==0)*1000),window);
-    [cta_alternativeL,~]=CTA(LData(ChoiceLeftadj==0,:),ceil(ST(CompletedTrials&Index50Fifty&ChoiceLeft==0)*1000),window);
-    [cta_alternativeR,cta_time]=CTA(RData(ChoiceLeftadj==1,:),ceil(ST(CompletedTrials&Index50Fifty&ChoiceLeft==1)*1000),window);
+    [cta_chosenL,~]=CTA(LData(ChoiceLeftadj==1,:),ceil(ST(CompletedTrials&Index50Fifty&ChoiceLeft==1)*1000),windowCTA);
+    [cta_chosenR,~]=CTA(RData(ChoiceLeftadj==0,:),ceil(ST(CompletedTrials&Index50Fifty&ChoiceLeft==0)*1000),windowCTA);
+    [cta_alternativeL,~]=CTA(LData(ChoiceLeftadj==0,:),ceil(ST(CompletedTrials&Index50Fifty&ChoiceLeft==0)*1000),windowCTA);
+    [cta_alternativeR,cta_time]=CTA(RData(ChoiceLeftadj==1,:),ceil(ST(CompletedTrials&Index50Fifty&ChoiceLeft==1)*1000),windowCTA);
     
     cta_chosen = [cta_chosenL;cta_chosenR];
     cta_alternative = [cta_alternativeL;cta_alternativeR];
