@@ -173,6 +173,10 @@ if ~isempty(WTCatch)
     xlabel('Waiting time (s)');ylabel('% correct')
 end
 
+[r,p]=corr(WTCatch',AllSessions.Correct(AllSessions.CompletedTrials&AllSessions.CatchTrial&AllSessions.WT>MinWT&AllSessions.WT<MaxWT)','type','Spearman');
+text(min(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-0.05,['r=',num2str(round(r*100)/100),', p=',num2str(round(p*100)/100)]);
+
+
 %Vevaiometric
 subplot(2,4,4)
 hold on
@@ -196,6 +200,17 @@ if ~isempty(DVCatch)
     legend('Correct Catch','Error','Location','best')
 end
 
+%evaluate vevaiometric
+[Rcatch,Pcatch] = EvaluateVevaiometric(DVCatch,WTCatch);
+[Rerror,Perror] = EvaluateVevaiometric(DVError,WTError);
+text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-1,['r_l=',num2str(round(Rcatch(1)*100)/100),', p_l=',num2str(round(Pcatch(1)*100)/100)],'Color',[0,.8,0]);
+text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-2,['r_r=',num2str(round(Rcatch(2)*100)/100),', p_r=',num2str(round(Pcatch(2)*100)/100)],'Color',[0,.8,0]);
+text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-3,['r=',num2str(round(Rcatch(3)*100)/100),', p=',num2str(round(Pcatch(3)*100)/100)],'Color',[0,.8,0]);
+text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-5,['r_l=',num2str(round(Rerror(1)*100)/100),', p_l=',num2str(round(Perror(1)*100)/100)],'Color',[.8,0,0]);
+text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-6,['r_r=',num2str(round(Rerror(2)*100)/100),', p_r=',num2str(round(Perror(2)*100)/100)],'Color',[.8,0,0]);
+text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-7,['r=',num2str(round(Rerror(3)*100)/100),', p=',num2str(round(Perror(3)*100)/100)],'Color',[.8,0,0]);
+
+
 %reaction time
 subplot(2,4,5)
 hold on
@@ -209,9 +224,9 @@ if sum(CompletedTrials)>1
         ylabel('p')
         subplot(2,4,6)
         plot(abs(ExperiencedDV(CompletedTrials)),ST(CompletedTrials),'.k')
-        [r,p]=corrcoef(abs(ExperiencedDV(CompletedTrials&~isnan(ST))),ST(CompletedTrials&~isnan(ST)));
+        [r,p]=corr(abs(AllSessions.ExperiencedDV(AllSessions.CompletedTrials&~isnan(AllSessions.ST)))',AllSessions.ST(AllSessions.CompletedTrials&~isnan(AllSessions.ST))','type','Spearman');
         xlabel('DV');ylabel('Sampling time (s)')
-        text(min(get(gca,'XLim'))+0.05,0.99*max(get(gca,'YLim')),['r=',num2str(round(r(1,2)*100)/100),', p=',num2str(round(p(1,2)*100)/100)]);
+        text(min(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-0.1,['r=',num2str(round(r*100)/100),', p=',num2str(round(p*100)/100)]);
     end
 end
 
@@ -348,4 +363,12 @@ else
     display('Error:SendMyMail:Number of input arguments wrong.')
 end
 
+end
+
+function [R,P] = EvaluateVevaiometric(DV,WT)
+R = zeros(1,3);
+P=zeros(1,3);
+[R(1),P(1)] = corr(DV(DV<=0)',WT(DV<=0)','type','Spearman');
+[R(2),P(2)] = corr(DV(DV>0)',WT(DV>0)','type','Spearman');
+[R(3),P(3)] = corr(abs(DV)',WT','type','Spearman');
 end
