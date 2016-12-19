@@ -220,7 +220,7 @@ subplot(2,4,7)
 %remove "full" grace periods
 GracePeriods(GracePeriods>=GracePeriodsMax-0.001 & GracePeriods<=GracePeriodsMax+0.001 )=[];
 center = 0:0.01:max(GracePeriods);
-if ~all(isnan(GracePeriods))
+if ~all(isnan(GracePeriods)) && numel(center) > 1
     g = hist(GracePeriods,center);
     g=g/sum(g);
     plot(center,g,'k','LineWidth',2)
@@ -251,7 +251,9 @@ if sum(Index50Fifty)>1
     xlabel('T-choice (s)')
     ylabel('Excess clicks/s')
     lowcut = quantile(ST(CompletedTrials&Index50Fifty),0.95);
-    xlim([-lowcut,0])
+    if ~isnan(lowcut)
+        xlim([-lowcut,0])
+    end
     % ylim([-15,15])
     legend('Chosen','Alternative','Location','best')
     legend('boxoff')
