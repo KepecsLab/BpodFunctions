@@ -99,7 +99,7 @@ for t = 1 : length(ST)
     L = BpodSystem.Data.Custom.LeftClickTrain{t};
     Ri = find(R>ST(t),1,'first'); if isempty(Ri), Ri=1; end
     Li = find(L>ST(t),1,'first');if isempty(Li), Li=1; end
-    ExperiencedDV(t) = log(Li/Ri);
+    ExperiencedDV(t) = log10(Li/Ri);
     %         ExperiencedDV(t) = (Li-Ri)./(Li+Ri);
 end
 
@@ -128,8 +128,8 @@ if ~isempty(AudDV)
     XFit = linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100);
     YFit = glmval(glmfit(AudDV,ChoiceLeft(CompletedTrials)','binomial'),linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100),'logit');
     plot(XFit,YFit,'k');
-    xlabel('DV');ylabel('%left')
-    text(0.95*min(get(gca,'XLim')),0.96*max(get(gca,'YLim')),[num2str(round(nanmean(Correct(CompletedTrials))*100)/100),'%,n=',num2str(nTrialsCompleted)]);
+    xlabel('DV');ylabel('p left')
+    text(0.95*min(get(gca,'XLim')),0.96*max(get(gca,'YLim')),[num2str(round(nanmean(Correct(CompletedTrials))*100)),'%,n=',num2str(nTrialsCompleted)]);
 end
 
 %conditioned psychometric
@@ -157,7 +157,7 @@ if ~isempty(AudDV)
     XFit = linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100);
     YFit = glmval(glmfit(AudDV,ChoiceLeftadj','binomial'),linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100),'logit');
     plot(XFit,YFit,'k');
-    xlabel('DV');ylabel('%left')
+    xlabel('DV');ylabel('p left')
     legend([h2,h1],{['WT>',num2str(round(WTmed*100)/100)],['WT<',num2str(round(WTmed*100)/100)]},'Units','normalized','Position',[0.333,0.85,0.1,0.1])
 end
 
@@ -170,7 +170,7 @@ if ~isempty(WTCatch)
     WTX = grpstats(WTCatch,BinIdx,'mean');
     PerfY = grpstats(Correct(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT),BinIdx,'mean');
     plot(WTX,PerfY,'k','LineWidth',2);
-    xlabel('Waiting time (s)');ylabel('% correct')
+    xlabel('Waiting time (s)');ylabel('p correct')
 end
 
 [r,p]=corr(WTCatch',AllSessions.Correct(AllSessions.CompletedTrials&AllSessions.CatchTrial&AllSessions.WT>MinWT&AllSessions.WT<MaxWT)','type','Spearman');
@@ -212,26 +212,27 @@ text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-7,['r=',num2str(round(Rerror
 
 
 %reaction time
-subplot(2,4,5)
+panel=subplot(2,4,5);
 hold on
 if sum(CompletedTrials)>1
     center = linspace(min(ST(CompletedTrials)),max(ST(CompletedTrials)),15);
     h=hist(ST(CompletedTrials),center);
     if ~isempty(h)
         h=h/sum(h);
-        plot(center,h,'k','LineWidth',2)
-        xlabel('Sampling time (s)')
-        ylabel('p')
-        subplot(2,4,6)
-        plot(abs(ExperiencedDV(CompletedTrials)),ST(CompletedTrials),'.k')
-        [r,p]=corr(abs(AllSessions.ExperiencedDV(AllSessions.CompletedTrials&~isnan(AllSessions.ST)))',AllSessions.ST(AllSessions.CompletedTrials&~isnan(AllSessions.ST))','type','Spearman');
+        % ylabel('p')
+        plot(abs(ExperiencedDV(CompletedTrials)),ST(CompletedTrials),'.k');
         xlabel('DV');ylabel('Sampling time (s)')
+        ax2 = axes('Position',panel.Position);panel.Position=ax2.Position;
+        plot(h,center,'r','LineWidth',2,'Parent',ax2);
+        ax2.YAxis.Visible='off';ax2.XAxisLocation='top';ax2.Color='none';ax2.XAxis.FontSize = 8;ax2.XAxis.Color=[1,0,0];ax2.XLabel.String = 'p';ax2.XLabel.Position=[0.15,3.1,0];
+        [r,p]=corr(abs(ExperiencedDV(CompletedTrials&~isnan(ST)))',ST(CompletedTrials&~isnan(ST))','type','Spearman');
         text(min(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-0.1,['r=',num2str(round(r*100)/100),', p=',num2str(round(p*100)/100)]);
+        
     end
 end
 
 %grace periods
-subplot(2,4,7)
+subplot(2,4,6)
 %remove "full" grace periods
 GracePeriods(GracePeriods>=GracePeriodsMax-0.001 & GracePeriods<=GracePeriodsMax+0.001 )=[];
 center = 0:0.01:max(GracePeriods);
@@ -242,8 +243,8 @@ if ~all(isnan(GracePeriods)) && numel(center) > 1
     xlabel('Grace period (s)');ylabel('p');
 end
 
-%cta
-subplot(2,4,8)
+%cta choice
+subplot(2,4,7)
 hold on
 Index50Fifty = abs(DV)< .1;
 if sum(Index50Fifty)>1
@@ -272,6 +273,38 @@ if sum(Index50Fifty)>1
     % ylim([-15,15])
     legend('Chosen','Alternative','Location','best')
     legend('boxoff')
+    plot(get(gca,'XLim'),[.5,.5],'k--')
+end
+
+%cta stimulus
+subplot(2,4,8)
+hold on
+if sum(Index50Fifty)>1
+    Idx=ceil(ST(CompletedTrials&Index50Fifty)*1000);
+    for i = 1:size(LData,1)
+        LData(i,Idx(i):end) = NaN;
+    end
+    for i = 1:size(RData,1)
+        RData(i,Idx(i):end) = NaN;
+    end
+    [cta_chosenL,~]=CTA(LData(ChoiceLeftadj==1,:),ones(1,numel(LData(ChoiceLeftadj==1,:))),window);
+    [cta_chosenR,~]=CTA(RData(ChoiceLeftadj==0,:),ones(1,numel(LData(ChoiceLeftadj==0,:))),window);
+    [cta_alternativeL,~]=CTA(LData(ChoiceLeftadj==0,:),ones(1,numel(LData(ChoiceLeftadj==0,:))),window);
+    [cta_alternativeR,cta_time]=CTA(RData(ChoiceLeftadj==1,:),ones(1,numel(LData(ChoiceLeftadj==1,:))),window);
+    
+    cta_chosen = [cta_chosenL;cta_chosenR];
+    cta_alternative = [cta_alternativeL;cta_alternativeR];
+    
+    cta_chosen_mean = nanmean(cta_chosen,1);
+    cta_alternative_mean = nanmean(cta_alternative,1);
+    
+    nanplot(cta_time(cta_time>0)./1000,cta_chosen_mean(cta_time>0),'Color',[0,0,1],'LineWidth',2)
+    nanplot(cta_time(cta_time>0)./1000,cta_alternative_mean(cta_time>0),'Color',[1,0,0],'LineWidth',2)
+    xlabel('T-stimulus (s)')
+    ylabel('Excess clicks/s')
+    lowcut = quantile(ST(CompletedTrials&Index50Fifty),0.95);
+    xlim([0,lowcut])
+    % ylim([-15,15])
     plot(get(gca,'XLim'),[.5,.5],'k--')
 end
 
@@ -320,7 +353,7 @@ for i = 1:size(E,1)
 end
 
 %subtract mean clicks and convert to per sec
-cta = (cta-repmat(mean(E,2),1,2*T))*1000;
+cta = (cta-repmat(nanmean(E,2),1,2*T))*1000;
 
 %smooth/window
 Wins = 1:win:2*T;
