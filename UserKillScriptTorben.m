@@ -171,10 +171,10 @@ if ~isempty(WTCatch)
     PerfY = grpstats(Correct(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT),BinIdx,'mean');
     plot(WTX,PerfY,'k','LineWidth',2);
     xlabel('Waiting time (s)');ylabel('p correct')
+    [r,p]=corr(WTCatch',Correct(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT)','type','Spearman');
+    text(min(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-0.05,['r=',num2str(round(r*100)/100),', p=',num2str(round(p*100)/100)]);
 end
 
-[r,p]=corr(WTCatch',AllSessions.Correct(AllSessions.CompletedTrials&AllSessions.CatchTrial&AllSessions.WT>MinWT&AllSessions.WT<MaxWT)','type','Spearman');
-text(min(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-0.05,['r=',num2str(round(r*100)/100),', p=',num2str(round(p*100)/100)]);
 
 
 %Vevaiometric
@@ -198,17 +198,18 @@ if ~isempty(DVCatch)
     plot(DVCatch,WTCatch,'og','MarkerSize',2,'MarkerFaceColor','g')
     plot(DVError,WTError,'or','MarkerSize',2,'MarkerFaceColor','r')
     legend('Correct Catch','Error','Location','best')
+    %evaluate vevaiometric
+    [Rcatch,Pcatch] = EvaluateVevaiometric(DVCatch,WTCatch);
+    [Rerror,Perror] = EvaluateVevaiometric(DVError,WTError);
+    text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-1,['r_l=',num2str(round(Rcatch(1)*100)/100),', p_l=',num2str(round(Pcatch(1)*100)/100)],'Color',[0,.8,0]);
+    text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-2,['r_r=',num2str(round(Rcatch(2)*100)/100),', p_r=',num2str(round(Pcatch(2)*100)/100)],'Color',[0,.8,0]);
+    text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-3,['r=',num2str(round(Rcatch(3)*100)/100),', p=',num2str(round(Pcatch(3)*100)/100)],'Color',[0,.8,0]);
+    text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-5,['r_l=',num2str(round(Rerror(1)*100)/100),', p_l=',num2str(round(Perror(1)*100)/100)],'Color',[.8,0,0]);
+    text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-6,['r_r=',num2str(round(Rerror(2)*100)/100),', p_r=',num2str(round(Perror(2)*100)/100)],'Color',[.8,0,0]);
+    text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-7,['r=',num2str(round(Rerror(3)*100)/100),', p=',num2str(round(Perror(3)*100)/100)],'Color',[.8,0,0]);
+    
 end
 
-%evaluate vevaiometric
-[Rcatch,Pcatch] = EvaluateVevaiometric(DVCatch,WTCatch);
-[Rerror,Perror] = EvaluateVevaiometric(DVError,WTError);
-text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-1,['r_l=',num2str(round(Rcatch(1)*100)/100),', p_l=',num2str(round(Pcatch(1)*100)/100)],'Color',[0,.8,0]);
-text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-2,['r_r=',num2str(round(Rcatch(2)*100)/100),', p_r=',num2str(round(Pcatch(2)*100)/100)],'Color',[0,.8,0]);
-text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-3,['r=',num2str(round(Rcatch(3)*100)/100),', p=',num2str(round(Pcatch(3)*100)/100)],'Color',[0,.8,0]);
-text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-5,['r_l=',num2str(round(Rerror(1)*100)/100),', p_l=',num2str(round(Perror(1)*100)/100)],'Color',[.8,0,0]);
-text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-6,['r_r=',num2str(round(Rerror(2)*100)/100),', p_r=',num2str(round(Perror(2)*100)/100)],'Color',[.8,0,0]);
-text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-7,['r=',num2str(round(Rerror(3)*100)/100),', p=',num2str(round(Perror(3)*100)/100)],'Color',[.8,0,0]);
 
 
 %reaction time
@@ -262,8 +263,8 @@ if sum(Index50Fifty)>1
     cta_chosen_mean = nanmean(cta_chosen,1);
     cta_alternative_mean = nanmean(cta_alternative,1);
     
-    nanplot(cta_time(cta_time<0)./1000,cta_chosen_mean(cta_time<0),'Color',[0,0,1],'LineWidth',2)
-    nanplot(cta_time(cta_time<0)./1000,cta_alternative_mean(cta_time<0),'Color',[1,0,0],'LineWidth',2)
+    plot(cta_time(cta_time<0)./1000,cta_chosen_mean(cta_time<0),'Color',[0,0,1],'LineWidth',2)
+    plot(cta_time(cta_time<0)./1000,cta_alternative_mean(cta_time<0),'Color',[1,0,0],'LineWidth',2)
     xlabel('T-choice (s)')
     ylabel('Excess clicks/s')
     lowcut = quantile(ST(CompletedTrials&Index50Fifty),0.95);
@@ -287,10 +288,10 @@ if sum(Index50Fifty)>1
     for i = 1:size(RData,1)
         RData(i,Idx(i):end) = NaN;
     end
-    [cta_chosenL,~]=CTA(LData(ChoiceLeftadj==1,:),ones(1,numel(LData(ChoiceLeftadj==1,:))),window);
-    [cta_chosenR,~]=CTA(RData(ChoiceLeftadj==0,:),ones(1,numel(LData(ChoiceLeftadj==0,:))),window);
-    [cta_alternativeL,~]=CTA(LData(ChoiceLeftadj==0,:),ones(1,numel(LData(ChoiceLeftadj==0,:))),window);
-    [cta_alternativeR,cta_time]=CTA(RData(ChoiceLeftadj==1,:),ones(1,numel(LData(ChoiceLeftadj==1,:))),window);
+    [cta_chosenL,~]=CTA(LData(ChoiceLeftadj==1,:),ones(1,numel(LData(ChoiceLeftadj==1,:))),windowCTA);
+    [cta_chosenR,~]=CTA(RData(ChoiceLeftadj==0,:),ones(1,numel(LData(ChoiceLeftadj==0,:))),windowCTA);
+    [cta_alternativeL,~]=CTA(LData(ChoiceLeftadj==0,:),ones(1,numel(LData(ChoiceLeftadj==0,:))),windowCTA);
+    [cta_alternativeR,cta_time]=CTA(RData(ChoiceLeftadj==1,:),ones(1,numel(LData(ChoiceLeftadj==1,:))),windowCTA);
     
     cta_chosen = [cta_chosenL;cta_chosenR];
     cta_alternative = [cta_alternativeL;cta_alternativeR];
@@ -298,8 +299,8 @@ if sum(Index50Fifty)>1
     cta_chosen_mean = nanmean(cta_chosen,1);
     cta_alternative_mean = nanmean(cta_alternative,1);
     
-    nanplot(cta_time(cta_time>0)./1000,cta_chosen_mean(cta_time>0),'Color',[0,0,1],'LineWidth',2)
-    nanplot(cta_time(cta_time>0)./1000,cta_alternative_mean(cta_time>0),'Color',[1,0,0],'LineWidth',2)
+    plot(cta_time(cta_time>0)./1000,cta_chosen_mean(cta_time>0),'Color',[0,0,1],'LineWidth',2)
+    plot(cta_time(cta_time>0)./1000,cta_alternative_mean(cta_time>0),'Color',[1,0,0],'LineWidth',2)
     xlabel('T-stimulus (s)')
     ylabel('Excess clicks/s')
     lowcut = quantile(ST(CompletedTrials&Index50Fifty),0.95);
