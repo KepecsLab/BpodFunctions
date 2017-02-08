@@ -17,6 +17,6 @@ if length(outcome)>30
 end
 outcome(isnan(outcome)) = 9;
 
-url=strcat('http://kepecsdata.cshl.edu/scripts/',script,'?rig=',rig,'&outcome=',num2str(outcome,'%i'),'&subject=',subject,'&protocol=',protocol);
+url=strcat('http://kepecsdata.cshl.edu/observer/scripts/',script,'?rig=',rig,'&outcome=',num2str(outcome,'%i'),'&subject=',subject,'&protocol=',protocol);
 webread(url);
 end
