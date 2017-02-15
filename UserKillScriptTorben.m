@@ -245,7 +245,7 @@ subplot(2,4,6)
 GracePeriods(GracePeriods>=GracePeriodsMax-0.001 & GracePeriods<=GracePeriodsMax+0.001 )=[];
 GracePeriodsR(GracePeriodsR>=GracePeriodsMax-0.001 & GracePeriodsR<=GracePeriodsMax+0.001 )=[];
 GracePeriodsL(GracePeriodsL>=GracePeriodsMax-0.001 & GracePeriodsL<=GracePeriodsMax+0.001 )=[];
-center = 0:0.05:max(GracePeriods);
+center = 0:0.025:max(GracePeriods);
 if ~all(isnan(GracePeriodsL)) && numel(center) > 1 && ~all(isnan(GracePeriodsR))
     g = hist(GracePeriods,center);g=g/sum(g);
     gl = hist(GracePeriodsL,center);gl=gl/sum(gl);
