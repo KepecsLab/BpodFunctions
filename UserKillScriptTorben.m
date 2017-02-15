@@ -105,8 +105,15 @@ end
 
 %caclulate  grace periods
 GracePeriods=[];
+GracePeriodsL=[];
+GracePeriodsR=[];
 for t = 1 : length(ST)
-    GracePeriods = [GracePeriods;BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Rin_grace(:,2)-BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Rin_grace(:,1)];
+    GracePeriods = [GracePeriods;BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Rin_grace(:,2)-BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Rin_grace(:,1);BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Lin_grace(:,2)-BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Lin_grace(:,1)];
+    if ChoiceLeft(t) == 1
+        GracePeriodsL = [GracePeriodsL;BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Lin_grace(:,2)-BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Lin_grace(:,1)];
+    elseif ChoiceLeft(t)==0
+        GracePeriodsR = [GracePeriodsR;BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Rin_grace(:,2)-BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Rin_grace(:,1)];
+    end
 end
 
 
@@ -236,12 +243,19 @@ end
 subplot(2,4,6)
 %remove "full" grace periods
 GracePeriods(GracePeriods>=GracePeriodsMax-0.001 & GracePeriods<=GracePeriodsMax+0.001 )=[];
-center = 0:0.01:max(GracePeriods);
-if ~all(isnan(GracePeriods)) && numel(center) > 1
-    g = hist(GracePeriods,center);
-    g=g/sum(g);
+GracePeriodsR(GracePeriodsR>=GracePeriodsMax-0.001 & GracePeriodsR<=GracePeriodsMax+0.001 )=[];
+GracePeriodsL(GracePeriodsL>=GracePeriodsMax-0.001 & GracePeriodsL<=GracePeriodsMax+0.001 )=[];
+center = 0:0.05:max(GracePeriods);
+if ~all(isnan(GracePeriodsL)) && numel(center) > 1 && ~all(isnan(GracePeriodsR))
+    g = hist(GracePeriods,center);g=g/sum(g);
+    gl = hist(GracePeriodsL,center);gl=gl/sum(gl);
+    gr = hist(GracePeriodsR,center);gr=gr/sum(gr);
+    hold on
     plot(center,g,'k','LineWidth',2)
+    plot(center,gl,'m','LineWidth',1)
+    plot(center,gr,'c','LineWidth',1)
     xlabel('Grace period (s)');ylabel('p');
+    text(min(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-0.05,['n=',num2str(sum(~isnan(GracePeriods))),'(',num2str(sum(~isnan(GracePeriodsL))),'/',num2str(sum(~isnan(GracePeriodsR))),')']);
 end
 
 %cta choice
