@@ -50,6 +50,27 @@ else
     fprintf('Error:SendFigureTo:Mail could not be sent to %s.\n',MailAddress);
 end
 
+%% copy data to server
+try
+    %CHANGE THIS TO 'homes\YOUR-ACCOUNT-NAME' OR to 'SHARED-FOLDER-NAME'
+    %examples: user = 'homes\torben'; % user name on server
+    %          user = 'confidence';   % shared folder
+    user = strcat('homes\',getenv('username'));
+    %%%%%
+
+    [~,subject] = fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
+    if ~isdir(fullfile('\\kepecsdata',user,'BpodData',BpodSystem.CurrentProtocolName,subject,'Session Data'))
+        mkdir(fullfile('\\kepecsdata',user,'BpodData',BpodSystem.CurrentProtocolName,subject,'Session Data'));
+    end
+    if ~isdir(fullfile('\\kepecsdata',user,'BpodData',BpodSystem.CurrentProtocolName,subject,'Session Settings'))
+        mkdir(fullfile('\\kepecsdata',user,'BpodData',BpodSystem.CurrentProtocolName,subject,'Session Settings'));
+    end    
+    copyfile(BpodSystem.DataPath,fullfile('\\kepecsdata',user,'BpodData',BpodSystem.CurrentProtocolName,subject,'Session Data'));
+    copyfile(BpodSystem.SettingsPath,fullfile('\\kepecsdata',user,'BpodData',BpodSystem.CurrentProtocolName,subject,'Session Settings'));
+catch
+    fprintf('Error copying data to server. Files not copied!\n');
+end
+
 end
 
 function FigHandle = Analysis()
