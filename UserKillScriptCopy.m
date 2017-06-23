@@ -17,14 +17,14 @@ try
     %%%%%
 
     [~,subject] = fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
-    if ~isdir(fullfile('\\kepecsdata',user,'BpodData',BpodSystem.CurrentProtocolName,subject,'Session Data'))
-        mkdir(fullfile('\\kepecsdata',user,'BpodData',BpodSystem.CurrentProtocolName,subject,'Session Data'));
+    if ~isdir(fullfile('\\kepecsdata',user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'))
+        mkdir(fullfile('\\kepecsdata',user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'));
     end
-    if ~isdir(fullfile('\\kepecsdata',user,'BpodData',BpodSystem.CurrentProtocolName,subject,'Session Settings'))
-        mkdir(fullfile('\\kepecsdata',user,'BpodData',BpodSystem.CurrentProtocolName,subject,'Session Settings'));
+    if ~isdir(fullfile('\\kepecsdata',user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'))
+        mkdir(fullfile('\\kepecsdata',user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'));
     end    
-    copyfile(BpodSystem.DataPath,fullfile('\\kepecsdata',user,'BpodData',BpodSystem.CurrentProtocolName,subject,'Session Data'));
-    copyfile(BpodSystem.SettingsPath,fullfile('\\kepecsdata',user,'BpodData',BpodSystem.CurrentProtocolName,subject,'Session Settings'));
+    copyfile(BpodSystem.DataPath,fullfile('\\kepecsdata',user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'));
+    copyfile(BpodSystem.SettingsPath,fullfile('\\kepecsdata',user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'));
 catch
     fprintf('Error copying data to server. Files not copied!\n');
 end

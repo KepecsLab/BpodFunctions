@@ -3,7 +3,11 @@ function UserKillScriptTorben
 
 global BpodSystem
 
-MailAddress = 'xxx@m.evernote.com';
+%load mail settings --> contains mail address & password & evernote e-mail address
+MailSettings = load('MailSettings.mat');
+
+%evernote mail address
+MailAddress = MailSettings.EvernoteMail;
 
 %save figure
 FigureFolder = fullfile(fileparts(fileparts(BpodSystem.DataPath)),'Session Figures');
@@ -59,14 +63,14 @@ try
     %%%%%
 
     [~,subject] = fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
-    if ~isdir(fullfile('\\kepecsdata',user,'BpodData',BpodSystem.CurrentProtocolName,subject,'Session Data'))
-        mkdir(fullfile('\\kepecsdata',user,'BpodData',BpodSystem.CurrentProtocolName,subject,'Session Data'));
+    if ~isdir(fullfile('\\kepecsdata',user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'))
+        mkdir(fullfile('\\kepecsdata',user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'));
     end
-    if ~isdir(fullfile('\\kepecsdata',user,'BpodData',BpodSystem.CurrentProtocolName,subject,'Session Settings'))
-        mkdir(fullfile('\\kepecsdata',user,'BpodData',BpodSystem.CurrentProtocolName,subject,'Session Settings'));
+    if ~isdir(fullfile('\\kepecsdata',user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'))
+        mkdir(fullfile('\\kepecsdata',user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'));
     end    
-    copyfile(BpodSystem.DataPath,fullfile('\\kepecsdata',user,'BpodData',BpodSystem.CurrentProtocolName,subject,'Session Data'));
-    copyfile(BpodSystem.SettingsPath,fullfile('\\kepecsdata',user,'BpodData',BpodSystem.CurrentProtocolName,subject,'Session Settings'));
+    copyfile(BpodSystem.DataPath,fullfile('\\kepecsdata',user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'));
+    copyfile(BpodSystem.SettingsPath,fullfile('\\kepecsdata',user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'));
 catch
     fprintf('Error copying data to server. Files not copied!\n');
 end
@@ -405,10 +409,10 @@ end
 % (each as string)
 function sent = SendMyMail(varargin)
 sent = false;
-setpref('Internet','E_mail','torben.cshl@gmail.com')
+setpref('Internet','E_mail',MailSettings.MailFrom)
 setpref('Internet','SMTP_Server','smtp.gmail.com')
-setpref('Internet','SMTP_Username','torben.cshl@gmail.com')
-setpref('Internet','SMTP_Password','xxx')
+setpref('Internet','SMTP_Username',MailSettings.MailFrom)
+setpref('Internet','SMTP_Password',MailSettings.MailFromPassword)
 props = java.lang.System.getProperties;
 props.setProperty('mail.smtp.auth','true');
 props.setProperty('mail.smtp.socketFactory.class', 'javax.net.ssl.SSLSocketFactory');
