@@ -4,7 +4,7 @@ function UserKillScriptTorben
 global BpodSystem
 
 %load mail settings --> contains mail address & password & evernote e-mail address
-MailSettings = load('MailSettings.mat');
+load('MailSettings.mat');%loads MailSettings struct
 
 %evernote mail address
 MailAddress = MailSettings.EvernoteMail;
@@ -46,7 +46,7 @@ else
     Attachment = {FigurePath};
 end
 
-sent = SendMyMail(MailAddress,Subject,Body,Attachment);
+sent = SendMyMail(MailSettings,MailAddress,Subject,Body,Attachment);
 
 if sent
     fprintf('Figure "%s" sent to %s.\n',FigureString,MailAddress);
@@ -212,20 +212,27 @@ end
 %Vevaiometric
 subplot(2,4,4)
 hold on
-
+meanWTL = nanmean(WT(CompletedTrials&(CatchTrial&Correct==1|Correct==0)&WT>MinWT&WT<MaxWT&ChoiceLeft==1));
+meanWTR = nanmean(WT(CompletedTrials&(CatchTrial&Correct==1|Correct==0)&WT>MinWT&WT<MaxWT&ChoiceLeft==0));
+PshortWTL = sum(WT(CompletedTrials&ChoiceLeft==1)<MinWT)/sum(WT(CompletedTrials&ChoiceLeft==1));
+PshortWTR = sum(WT(CompletedTrials&ChoiceLeft==0)<MinWT)/sum(WT(CompletedTrials&ChoiceLeft==0));
 WTCatch = WT(CompletedTrials&CatchTrial&Correct==1&WT>MinWT&WT<MaxWT);
 DVCatch = ExperiencedDV(CompletedTrials&CatchTrial&Correct==1&WT>MinWT&WT<MaxWT);
 if ~isempty(DVCatch)
     BinIdx = discretize(DVCatch,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBinWT+1));
+    if ~all(isnan(BinIdx))
     WTCatchY = grpstats(WTCatch,BinIdx,'mean');
     DVCatchX = grpstats(DVCatch,BinIdx,'mean');
     plot(DVCatchX,WTCatchY,'g','LineWidth',2)
+    end
     WTError = WT(CompletedTrials&Correct==0&WT>MinWT&WT<MaxWT);
     DVError = ExperiencedDV(CompletedTrials&Correct==0&WT>MinWT&WT<MaxWT);
     BinIdx = discretize(DVError,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBinWT+1));
+    if ~all(isnan(BinIdx))
     WTErrorY = grpstats(WTError,BinIdx,'mean');
     DVErrorX = grpstats(DVError,BinIdx,'mean');
-    plot(DVErrorX,WTErrorY,'r','LineWidth',2)
+    plot(DVErrorX,WTErrorY,'r','LineWidth',2) 
+    end
     xlabel('DV');ylabel('Waiting time (s)')
     plot(DVCatch,WTCatch,'og','MarkerSize',2,'MarkerFaceColor','g')
     plot(DVError,WTError,'or','MarkerSize',2,'MarkerFaceColor','r')
@@ -233,13 +240,12 @@ if ~isempty(DVCatch)
     %evaluate vevaiometric
     [Rcatch,Pcatch] = EvaluateVevaiometric(DVCatch,WTCatch);
     [Rerror,Perror] = EvaluateVevaiometric(DVError,WTError);
-    text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-1,['r_l=',num2str(round(Rcatch(1)*100)/100),', p_l=',num2str(round(Pcatch(1)*100)/100)],'Color',[0,.8,0]);
-    text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-2,['r_r=',num2str(round(Rcatch(2)*100)/100),', p_r=',num2str(round(Pcatch(2)*100)/100)],'Color',[0,.8,0]);
-    text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-3,['r=',num2str(round(Rcatch(3)*100)/100),', p=',num2str(round(Pcatch(3)*100)/100)],'Color',[0,.8,0]);
-    text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-5,['r_l=',num2str(round(Rerror(1)*100)/100),', p_l=',num2str(round(Perror(1)*100)/100)],'Color',[.8,0,0]);
-    text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-6,['r_r=',num2str(round(Rerror(2)*100)/100),', p_r=',num2str(round(Perror(2)*100)/100)],'Color',[.8,0,0]);
-    text(max(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-7,['r=',num2str(round(Rerror(3)*100)/100),', p=',num2str(round(Perror(3)*100)/100)],'Color',[.8,0,0]);
-    
+    text(max(get(gca,'XLim'))+0.03,0.9*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['r_l=',num2str(round(Rcatch(1)*100)/100),' r_r=',num2str(round(Rcatch(2)*100)/100)],'Color',[0,.8,0]);
+    text(max(get(gca,'XLim'))+0.03,0.8*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['r=',num2str(round(Rcatch(3)*100)/100),', p=',num2str(round(Pcatch(3)*100)/100)],'Color',[0,.8,0]);
+    text(max(get(gca,'XLim'))+0.03,0.65*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['r_l=',num2str(round(Rerror(1)*100)/100),' r_r=',num2str(round(Rerror(2)*100)/100)],'Color',[.8,0,0]);
+    text(max(get(gca,'XLim'))+0.03,0.55*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['r=',num2str(round(Rerror(3)*100)/100),', p=',num2str(round(Perror(3)*100)/100)],'Color',[.8,0,0]);
+    text(max(get(gca,'XLim'))+0.03,0.35*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['m_l=',num2str(round(meanWTL*10)/10),', m_r=',num2str(round(meanWTR*10)/10)],'Color',[0,0,0]);
+    text(max(get(gca,'XLim'))+0.03,0.25*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['L_{2}=',num2str(round(PshortWTL*100)/100),', R_{2}=',num2str(round(PshortWTR*100)/100)],'Color',[0,0,0]);
 end
 
 
@@ -409,6 +415,7 @@ end
 % (each as string)
 function sent = SendMyMail(varargin)
 sent = false;
+MailSettings = varargin{1};
 setpref('Internet','E_mail',MailSettings.MailFrom)
 setpref('Internet','SMTP_Server','smtp.gmail.com')
 setpref('Internet','SMTP_Username',MailSettings.MailFrom)
@@ -418,16 +425,16 @@ props.setProperty('mail.smtp.auth','true');
 props.setProperty('mail.smtp.socketFactory.class', 'javax.net.ssl.SSLSocketFactory');
 props.setProperty('mail.smtp.socketFactory.port','465');
 
-if length(varargin)==3
+if length(varargin)==4
     try
-        sendmail(varargin{1},varargin{2},varargin{3})
+        sendmail(varargin{2},varargin{3},varargin{4})
         sent=true;
     catch
         display('Error:SendMyMail:E-Mail could not be sent.')
     end
-elseif length(varargin)==4
+elseif length(varargin)==5
     try
-        sendmail(varargin{1},varargin{2},varargin{3},varargin{4})
+        sendmail(varargin{2},varargin{3},varargin{4},varargin{5})
         sent=true;
     catch
         display('Error:SendMyMail:E-Mail could not be sent.')
@@ -441,7 +448,13 @@ end
 function [R,P] = EvaluateVevaiometric(DV,WT)
 R = zeros(1,3);
 P=zeros(1,3);
+if sum(DV<=0)>0
 [R(1),P(1)] = corr(DV(DV<=0)',WT(DV<=0)','type','Spearman');
+end
+if sum(DV>0)>0
 [R(2),P(2)] = corr(DV(DV>0)',WT(DV>0)','type','Spearman');
+end
+if sum(~isnan(DV))>0
 [R(3),P(3)] = corr(abs(DV)',WT','type','Spearman');
+end
 end
