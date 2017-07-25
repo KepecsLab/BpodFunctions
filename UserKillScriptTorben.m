@@ -61,16 +61,22 @@ try
     %          user = 'confidence';   % shared folder
     user = strcat('homes\',getenv('username'));
     %%%%%
-
-    [~,subject] = fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
-    if ~isdir(fullfile('\\kepecsdata',user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'))
-        mkdir(fullfile('\\kepecsdata',user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'));
+    %os
+    os = getenv('OS');
+    if strcmpi(os(1:min(7,length(os))),'windows')
+        servername = '\\kepecsdata';
+    else
+        servername = '/media/';
     end
-    if ~isdir(fullfile('\\kepecsdata',user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'))
-        mkdir(fullfile('\\kepecsdata',user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'));
+    [~,subject] = fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
+    if ~isdir(fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'))
+        mkdir(fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'));
+    end
+    if ~isdir(fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'))
+        mkdir(fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'));
     end    
-    copyfile(BpodSystem.DataPath,fullfile('\\kepecsdata',user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'));
-    copyfile(BpodSystem.SettingsPath,fullfile('\\kepecsdata',user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'));
+    copyfile(BpodSystem.DataPath,fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'));
+    copyfile(BpodSystem.SettingsPath,fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'));
 catch
     fprintf('Error copying data to server. Files not copied!\n');
 end
