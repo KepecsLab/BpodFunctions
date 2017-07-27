@@ -108,8 +108,7 @@ CatchTrial = BpodSystem.Data.Custom.CatchTrial((1:nTrials-1));
 Feedback = BpodSystem.Data.Custom.Feedback(1:nTrials-1);
 Correct = BpodSystem.Data.Custom.ChoiceCorrect(1:nTrials-1);
 WT =  BpodSystem.Data.Custom.FeedbackTime(1:nTrials-1);
-LeftClickTrain = BpodSystem.Data.Custom.LeftClickTrain(1:nTrials-1);
-RightClickTrain = BpodSystem.Data.Custom.RightClickTrain(1:nTrials-1);
+
 
 %define "completed trial"
 % not that abvious for errors
@@ -124,13 +123,28 @@ nTrialsCompleted = sum(CompletedTrials);
 
 %calculate exerienced dv
 ExperiencedDV=zeros(1,length(ST));
-for t = 1 : length(ST)
-    R = BpodSystem.Data.Custom.RightClickTrain{t};
-    L = BpodSystem.Data.Custom.LeftClickTrain{t};
-    Ri = find(R>ST(t),1,'first'); if isempty(Ri), Ri=1; end
-    Li = find(L>ST(t),1,'first');if isempty(Li), Li=1; end
-    ExperiencedDV(t) = log10(Li/Ri);
-    %         ExperiencedDV(t) = (Li-Ri)./(Li+Ri);
+
+%click task
+if TaskParameters.GUI.AuditoryStimulusType == 1 %click
+    LeftClickTrain = BpodSystem.Data.Custom.LeftClickTrain(1:nTrials-1);
+    RightClickTrain = BpodSystem.Data.Custom.RightClickTrain(1:nTrials-1);
+    for t = 1 : length(ST)
+        R = BpodSystem.Data.Custom.RightClickTrain{t};
+        L = BpodSystem.Data.Custom.LeftClickTrain{t};
+        Ri = find(R>ST(t),1,'first'); if isempty(Ri), Ri=1; end
+        Li = find(L>ST(t),1,'first');if isempty(Li), Li=1; end
+        ExperiencedDV(t) = log10(Li/Ri);
+        %         ExperiencedDV(t) = (Li-Ri)./(Li+Ri);
+    end
+elseif TaskParameters.GUI.AuditoryStimulusType == 2 %freq
+    LevelsLow = 1:ceil(TaskParameters.GUI.Aud_nFreq/3);
+    LevelsHigh = ceil(TaskParameters.GUI.Aud_nFreq*2/3)+1:TaskParameters.GUI.Aud_nFreq;
+    AudCloud = BpodSystem.Data.Custom.AudCloud(1:nTrials-1);
+    for t = 1 : length(ST)
+        NLow = sum(ismember(AudCloud{t},LevelsLow)); if NLow==0, NLow=1; end
+        NHigh = sum(ismember(AudCloud{t},LevelsHigh)); if NHigh==0, NHigh=1; end
+        ExperiencedDV(t) = log10(NHigh/NLow);
+    end
 end
 
 %caclulate  grace periods
@@ -297,15 +311,21 @@ end
 %cta choice
 subplot(2,4,7)
 hold on
-Index50Fifty = abs(DV)< .1;
+Index50Fifty = abs(DV)<= .1;
 if sum(Index50Fifty)>1
-    LData = Times2Table(LeftClickTrain(CompletedTrials&Index50Fifty),StimTime);
-    RData = Times2Table(RightClickTrain(CompletedTrials&Index50Fifty),StimTime);
+    if TaskParameters.GUI.AuditoryStimulusType == 1 %click
+        LData = Times2Table(LeftClickTrain(CompletedTrials&Index50Fifty),StimTime);
+        RData = Times2Table(RightClickTrain(CompletedTrials&Index50Fifty),StimTime);
+    elseif TaskParameters.GUI.AuditoryStimulusType == 2 %freq
+        shift = round(TaskParameters.GUI.Aud_ToneDuration*(1-TaskParameters.GUI.Aud_ToneOverlap)*1000);
+        LData = Times2TableFreq(AudCloud(CompletedTrials&Index50Fifty),StimTime,LevelsHigh,shift);
+        RData = Times2TableFreq(AudCloud(CompletedTrials&Index50Fifty),StimTime,LevelsLow,shift);
+    end
     ChoiceLeftadj = ChoiceLeft(CompletedTrials&Index50Fifty);
-    [cta_chosenL,~]=CTA(LData(ChoiceLeftadj==1,:),ceil(ST(CompletedTrials&Index50Fifty&ChoiceLeft==1)*1000),windowCTA);
-    [cta_chosenR,~]=CTA(RData(ChoiceLeftadj==0,:),ceil(ST(CompletedTrials&Index50Fifty&ChoiceLeft==0)*1000),windowCTA);
-    [cta_alternativeL,~]=CTA(LData(ChoiceLeftadj==0,:),ceil(ST(CompletedTrials&Index50Fifty&ChoiceLeft==0)*1000),windowCTA);
-    [cta_alternativeR,cta_time]=CTA(RData(ChoiceLeftadj==1,:),ceil(ST(CompletedTrials&Index50Fifty&ChoiceLeft==1)*1000),windowCTA);
+    [cta_chosenL,~]=CTA(LData(ChoiceLeftadj==1,:),min(floor(ST(CompletedTrials&Index50Fifty&ChoiceLeft==1)*1000),size(RData,2)),windowCTA);
+    [cta_chosenR,~]=CTA(RData(ChoiceLeftadj==0,:),min(floor(ST(CompletedTrials&Index50Fifty&ChoiceLeft==0)*1000),size(RData,2)),windowCTA);
+    [cta_alternativeL,~]=CTA(LData(ChoiceLeftadj==0,:),min(floor(ST(CompletedTrials&Index50Fifty&ChoiceLeft==0)*1000),size(RData,2)),windowCTA);
+    [cta_alternativeR,cta_time]=CTA(RData(ChoiceLeftadj==1,:),min(floor(ST(CompletedTrials&Index50Fifty&ChoiceLeft==1)*1000),size(RData,2)),windowCTA);
     
     cta_chosen = [cta_chosenL;cta_chosenR];
     cta_alternative = [cta_alternativeL;cta_alternativeR];
@@ -387,20 +407,24 @@ for i = 1 : length(TimesCell)
 end
 end
 
+function Table = Times2TableFreq(TimesCell,t,Levels,shift)
+Table = zeros(length(TimesCell),t*1000);
+for i = 1 : length(TimesCell)
+    timepoints=ceil(find(ismember(TimesCell{i},Levels))*shift);%index times shift in ms
+    Table(i,timepoints) = 1;
+end
+end
+
 %Compute CTA
 %2nd dim of E has to be "time"
 function [cta2,t] = CTA(E,idx,win)
-
-
 T = size(E,2);
 
 cta = nan(size(E,1),2*T);
 
 for i = 1:size(E,1)
-    
     cta(i,T+1:T+T-idx(i)+1)=E(i,idx(i):end);
     cta(i,T-idx(i)+1:T) = E(i,1:idx(i));
-    
 end
 
 %subtract mean clicks and convert to per sec
