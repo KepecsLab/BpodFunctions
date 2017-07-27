@@ -56,17 +56,16 @@ end
 
 %% copy data to server
 try
-    %CHANGE THIS TO 'homes\YOUR-ACCOUNT-NAME' OR to 'SHARED-FOLDER-NAME'
-    %examples: user = 'homes\torben'; % user name on server
-    %          user = 'confidence';   % shared folder
-    user = strcat('homes\',getenv('username'));
+
     %%%%%
     %os
     os = getenv('OS');
     if strcmpi(os(1:min(7,length(os))),'windows')
-        servername = '\\kepecsdata';
+        servername = '\\kepecsdata\homes';
+        user = strcat(getenv('username'));
     else
         servername = '/media/';
+        user='torben';
     end
     [~,subject] = fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
     if ~isdir(fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'))
@@ -440,6 +439,13 @@ if length(varargin)==4
     end
 elseif length(varargin)==5
     try
+        %attachments need to be in full path (not ~) for linux systems
+        for k =1:length(varargin{5})
+        if strcmp(varargin{5}{k}(1),'~')
+            varargin{5}{k} = fullfile('/home/torben',varargin{5}{k}(2:end));
+        end
+        end
+        
         sendmail(varargin{2},varargin{3},varargin{4},varargin{5})
         sent=true;
     catch
