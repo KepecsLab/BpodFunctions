@@ -23,4 +23,12 @@ for k =0:rigs.getLength-1
 end
 
 %start vlc
-system(['start "" "C:\Program Files\VideoLAN\VLC\VLC.exe" ', address]);
+try
+    system(['start "" "C:\Program Files (x86)\VideoLAN\VLC\VLC.exe" ', address]);
+catch
+    try
+        system(['start "" "C:\Program Files\VideoLAN\VLC\VLC.exe" ', address]);
+    catch 
+        fprintf('Starting VLC from command failed.');
+    end
+end
