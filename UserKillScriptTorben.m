@@ -56,7 +56,7 @@ end
 
 %% copy data to server
 try
-
+    
     %%%%%
     %os
     os = getenv('OS');
@@ -73,7 +73,7 @@ try
     end
     if ~isdir(fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'))
         mkdir(fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'));
-    end    
+    end
     copyfile(BpodSystem.DataPath,fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'));
     copyfile(BpodSystem.SettingsPath,fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'));
 catch
@@ -108,7 +108,7 @@ CatchTrial = BpodSystem.Data.Custom.CatchTrial((1:nTrials-1));
 Feedback = BpodSystem.Data.Custom.Feedback(1:nTrials-1);
 Correct = BpodSystem.Data.Custom.ChoiceCorrect(1:nTrials-1);
 WT =  BpodSystem.Data.Custom.FeedbackTime(1:nTrials-1);
-
+LaserTrial =  BpodSystem.Data.Custom.LaserTrial(1:nTrials-1);
 
 %define "completed trial"
 % not that abvious for errors
@@ -214,57 +214,73 @@ end
 
 %calibration
 subplot(2,4,3)
+hold on
+xlabel('Waiting time (s)');ylabel('p correct')
 WTBin=5;
-WTCatch = WT(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT);
-if ~isempty(WTCatch)
-    BinIdx = discretize(WTCatch,linspace(min(WTCatch)-10*eps,max(WTCatch)+10*eps,WTBin+1));
-    WTX = grpstats(WTCatch,BinIdx,'mean');
-    PerfY = grpstats(Correct(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT),BinIdx,'mean');
-    plot(WTX,PerfY,'k','LineWidth',2);
-    xlabel('Waiting time (s)');ylabel('p correct')
-    [r,p]=corr(WTCatch',Correct(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT)','type','Spearman');
-    text(min(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-0.05,['r=',num2str(round(r*100)/100),', p=',num2str(round(p*100)/100)]);
+CondColors={[0,0,0],[.9,.1,.1]};
+ColorsCorrect = {[.1,.9,.1],[.1,.8,.6]};
+ColorsError = {[.9,.1,.1],[.9,.1,.6]};
+if sum(LaserTrial)>0
+    LaserCond = [false;true];
+else
+    LaserCond=false;
 end
-
+for i =1:length(LaserCond)
+    WTCatch = WT(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT & LaserTrial==LaserCond(i));
+    if ~isempty(WTCatch)
+        BinIdx = discretize(WTCatch,linspace(min(WTCatch)-10*eps,max(WTCatch)+10*eps,WTBin+1));
+        WTX = grpstats(WTCatch,BinIdx,'mean');
+        PerfY = grpstats(Correct(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i)),BinIdx,'mean');
+        plot(WTX,PerfY,'Color',CondColors{i},'LineWidth',2);
+        [r,p]=corr(WTCatch',Correct(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i))','type','Spearman');
+        text(min(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-0.07*i,['r=',num2str(round(r*100)/100),', p=',num2str(round(p*100)/100)],'Color',CondColors{i});
+    end
+end
 
 
 %Vevaiometric
 subplot(2,4,4)
 hold on
-meanWTL = nanmean(WT(CompletedTrials&(CatchTrial&Correct==1|Correct==0)&WT>MinWT&WT<MaxWT&ChoiceLeft==1));
-meanWTR = nanmean(WT(CompletedTrials&(CatchTrial&Correct==1|Correct==0)&WT>MinWT&WT<MaxWT&ChoiceLeft==0));
-PshortWTL = sum(WT(CompletedTrials&ChoiceLeft==1)<MinWT)/sum(WT(CompletedTrials&ChoiceLeft==1));
-PshortWTR = sum(WT(CompletedTrials&ChoiceLeft==0)<MinWT)/sum(WT(CompletedTrials&ChoiceLeft==0));
-WTCatch = WT(CompletedTrials&CatchTrial&Correct==1&WT>MinWT&WT<MaxWT);
-DVCatch = ExperiencedDV(CompletedTrials&CatchTrial&Correct==1&WT>MinWT&WT<MaxWT);
-if ~isempty(DVCatch)
-    BinIdx = discretize(DVCatch,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBinWT+1));
-    if ~all(isnan(BinIdx))
-    WTCatchY = grpstats(WTCatch,BinIdx,'mean');
-    DVCatchX = grpstats(DVCatch,BinIdx,'mean');
-    plot(DVCatchX,WTCatchY,'g','LineWidth',2)
+xlabel('DV');ylabel('Waiting time (s)')
+AudDV = ExperiencedDV(CompletedTrials&CatchTrial&WT<MaxWT&WT>MinWT);
+Rcatch=cell(1,2);Pcatch=cell(1,2);Rerror=cell(1,2);Perror=cell(1,2);
+for i =1:length(LaserCond)
+    
+    WTCatch = WT(CompletedTrials&CatchTrial&Correct==1&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
+    DVCatch = ExperiencedDV(CompletedTrials&CatchTrial&Correct==1&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
+    if ~isempty(DVCatch)
+        BinIdx = discretize(DVCatch,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBinWT+1));
+        if ~all(isnan(BinIdx))
+            WTCatchY = grpstats(WTCatch,BinIdx,'mean');
+            DVCatchX = grpstats(DVCatch,BinIdx,'mean');
+            plot(DVCatchX,WTCatchY,'g','LineWidth',2)
+        end
+        WTError = WT(CompletedTrials&Correct==0&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
+        DVError = ExperiencedDV(CompletedTrials&Correct==0&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
+        BinIdx = discretize(DVError,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBinWT+1));
+        if ~all(isnan(BinIdx))
+            WTErrorY = grpstats(WTError,BinIdx,'mean');
+            DVErrorX = grpstats(DVError,BinIdx,'mean');
+            plot(DVErrorX,WTErrorY,'r','LineWidth',2)
+        end
+        
+        plot(DVCatch,WTCatch,'o','MarkerSize',2,'MarkerFaceColor',ColorsCorrect{i},'Color',ColorsCorrect{i})
+        plot(DVError,WTError,'o','MarkerSize',2,'MarkerFaceColor',ColorsError{i},'Color',ColorsError{i})
+        legend('Correct Catch','Error','Location','best')
+        %evaluate vevaiometric
+        [Rc,Pc] = EvaluateVevaiometric(DVCatch,WTCatch);
+        [Re,Pe] = EvaluateVevaiometric(DVError,WTError);
+        Rcatch{i}=Rc;Pcatch{i}=Pc;Rerror{i}=Re;Perror{i}=Pe;
+        
     end
-    WTError = WT(CompletedTrials&Correct==0&WT>MinWT&WT<MaxWT);
-    DVError = ExperiencedDV(CompletedTrials&Correct==0&WT>MinWT&WT<MaxWT);
-    BinIdx = discretize(DVError,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBinWT+1));
-    if ~all(isnan(BinIdx))
-    WTErrorY = grpstats(WTError,BinIdx,'mean');
-    DVErrorX = grpstats(DVError,BinIdx,'mean');
-    plot(DVErrorX,WTErrorY,'r','LineWidth',2) 
-    end
-    xlabel('DV');ylabel('Waiting time (s)')
-    plot(DVCatch,WTCatch,'og','MarkerSize',2,'MarkerFaceColor','g')
-    plot(DVError,WTError,'or','MarkerSize',2,'MarkerFaceColor','r')
-    legend('Correct Catch','Error','Location','best')
-    %evaluate vevaiometric
-    [Rcatch,Pcatch] = EvaluateVevaiometric(DVCatch,WTCatch);
-    [Rerror,Perror] = EvaluateVevaiometric(DVError,WTError);
-    text(max(get(gca,'XLim'))+0.03,0.9*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['r_l=',num2str(round(Rcatch(1)*100)/100),' r_r=',num2str(round(Rcatch(2)*100)/100)],'Color',[0,.8,0]);
-    text(max(get(gca,'XLim'))+0.03,0.8*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['r=',num2str(round(Rcatch(3)*100)/100),', p=',num2str(round(Pcatch(3)*100)/100)],'Color',[0,.8,0]);
-    text(max(get(gca,'XLim'))+0.03,0.65*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['r_l=',num2str(round(Rerror(1)*100)/100),' r_r=',num2str(round(Rerror(2)*100)/100)],'Color',[.8,0,0]);
-    text(max(get(gca,'XLim'))+0.03,0.55*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['r=',num2str(round(Rerror(3)*100)/100),', p=',num2str(round(Perror(3)*100)/100)],'Color',[.8,0,0]);
-    text(max(get(gca,'XLim'))+0.03,0.35*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['m_l=',num2str(round(meanWTL*10)/10),', m_r=',num2str(round(meanWTR*10)/10)],'Color',[0,0,0]);
-    text(max(get(gca,'XLim'))+0.03,0.25*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['L_{2}=',num2str(round(PshortWTL*100)/100),', R_{2}=',num2str(round(PshortWTR*100)/100)],'Color',[0,0,0]);
+end
+for i =1:length(LaserCond)
+    unit = max(get(gca,'YLim'))-min(get(gca,'YLim'));
+    text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.1+(i-1)*.5),['r_l=',num2str(round(Rcatch{i}(1)*100)/100),' r_r=',num2str(round(Rcatch{i}(2)*100)/100)],'Color',ColorsCorrect{i});
+    text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.2+(i-1)*.5),['r=',num2str(round(Rcatch{i}(3)*100)/100),', p=',num2str(round(Pcatch{i}(3)*100)/100)],'Color',ColorsCorrect{i});
+    text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.3+(i-1)*.5),['r_l=',num2str(round(Rerror{i}(1)*100)/100),' r_r=',num2str(round(Rerror{i}(2)*100)/100)],'Color',ColorsError{i});
+    text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.4+(i-1)*.5),['r=',num2str(round(Rerror{i}(3)*100)/100),', p=',num2str(round(Perror{i}(3)*100)/100)],'Color',ColorsError{i});
+    
 end
 
 
@@ -308,75 +324,59 @@ if ~all(isnan(GracePeriodsL)) && numel(center) > 1 && ~all(isnan(GracePeriodsR))
     text(min(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-0.05,['n=',num2str(sum(~isnan(GracePeriods))),'(',num2str(sum(~isnan(GracePeriodsL))),'/',num2str(sum(~isnan(GracePeriodsR))),')']);
 end
 
-%cta choice
-subplot(2,4,7)
-hold on
-Index50Fifty = abs(DV)<= .1;
-if sum(Index50Fifty)>1
-    if TaskParameters.GUI.AuditoryStimulusType == 1 %click
-        LData = Times2Table(LeftClickTrain(CompletedTrials&Index50Fifty),StimTime);
-        RData = Times2Table(RightClickTrain(CompletedTrials&Index50Fifty),StimTime);
-    elseif TaskParameters.GUI.AuditoryStimulusType == 2 %freq
-        shift = round(TaskParameters.GUI.Aud_ToneDuration*(1-TaskParameters.GUI.Aud_ToneOverlap)*1000);
-        LData = Times2TableFreq(AudCloud(CompletedTrials&Index50Fifty),StimTime,LevelsHigh,shift);
-        RData = Times2TableFreq(AudCloud(CompletedTrials&Index50Fifty),StimTime,LevelsLow,shift);
-    end
-    ChoiceLeftadj = ChoiceLeft(CompletedTrials&Index50Fifty);
-    [cta_chosenL,~]=CTA(LData(ChoiceLeftadj==1,:),min(floor(ST(CompletedTrials&Index50Fifty&ChoiceLeft==1)*1000),size(RData,2)),windowCTA);
-    [cta_chosenR,~]=CTA(RData(ChoiceLeftadj==0,:),min(floor(ST(CompletedTrials&Index50Fifty&ChoiceLeft==0)*1000),size(RData,2)),windowCTA);
-    [cta_alternativeL,~]=CTA(LData(ChoiceLeftadj==0,:),min(floor(ST(CompletedTrials&Index50Fifty&ChoiceLeft==0)*1000),size(RData,2)),windowCTA);
-    [cta_alternativeR,cta_time]=CTA(RData(ChoiceLeftadj==1,:),min(floor(ST(CompletedTrials&Index50Fifty&ChoiceLeft==1)*1000),size(RData,2)),windowCTA);
-    
-    cta_chosen = [cta_chosenL;cta_chosenR];
-    cta_alternative = [cta_alternativeL;cta_alternativeR];
-    
-    cta_chosen_mean = nanmean(cta_chosen,1);
-    cta_alternative_mean = nanmean(cta_alternative,1);
-    
-    plot(cta_time(cta_time<0)./1000,cta_chosen_mean(cta_time<0),'Color',[0,0,1],'LineWidth',2)
-    plot(cta_time(cta_time<0)./1000,cta_alternative_mean(cta_time<0),'Color',[1,0,0],'LineWidth',2)
-    xlabel('T-choice (s)')
-    ylabel('Excess clicks/s')
-    lowcut = quantile(ST(CompletedTrials&Index50Fifty),0.95);
-    if ~isnan(lowcut)
-        xlim([-lowcut,0])
-    end
-    % ylim([-15,15])
-    legend('Chosen','Alternative','Location','best')
-    legend('boxoff')
-    plot(get(gca,'XLim'),[.5,.5],'k--')
-end
+%waiting time distributions
+ColorsCond = {[.5,.5,.5],[.9,.1,.1]};
+if length(LaserCond)==1
+    %no laser
+    subplot(2,4,7)
+    hold on
+    xlabel('waiting time (s)'); ylabel ('n trials');
+    WTnoFeedbackL = WT(~Feedback & ChoiceLeft == 1);
+    WTnoFeedbackR = WT(~Feedback & ChoiceLeft == 0);
+    histogram(WTnoFeedbackL,10,'EdgeColor','none','FaceColor',[.2,.2,1]);
+    histogram(WTnoFeedbackR,10,'EdgeColor','none','FaceColor',[.8,.6,.1]);
 
-%cta stimulus
-subplot(2,4,8)
-hold on
-if sum(Index50Fifty)>1
-    Idx=ceil(ST(CompletedTrials&Index50Fifty)*1000);
-    for i = 1:size(LData,1)
-        LData(i,Idx(i):end) = NaN;
+    meanWTL = nanmean(WTnoFeedbackL);
+    meanWTR = nanmean(WTnoFeedbackR);
+    line([meanWTL,meanWTL],get(gca,'YLim'),'Color',[.2,.2,1]);
+    line([meanWTR,meanWTR],get(gca,'YLim'),'Color',[.8,.6,.1]);
+    text(meanWTL-1,1.05*(max(get(gca,'YLim'))-min(get(gca,'YLim'))),['m_l=',num2str(round(meanWTL*10)/10)],'Color',[.2,.2,1]);
+    text(meanWTL-1,1.15*(max(get(gca,'YLim'))-min(get(gca,'YLim'))),['m_r=',num2str(round(meanWTR*10)/10)],'Color',[.8,.6,.1]);
+    
+    PshortWTL = sum(WTnoFeedbackL<MinWT)/sum(~isnan(WTnoFeedbackL));
+    PshortWTR = sum(WTnoFeedbackR<MinWT)/sum(~isnan(WTnoFeedbackR));
+    text(max(get(gca,'XLim'))+0.03,0.85*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['L_{2}=',num2str(round(PshortWTL*100)/100),', R_{2}=',num2str(round(PshortWTR*100)/100)],'Color',[0,0,0]);
+    
+else%laser
+    subplot(2,4,7)
+    hold on
+    xlabel('waiting time (s)'); ylabel ('n trials');
+    subplot(2,4,8)
+    hold on
+    xlabel('waiting time (s)'); ylabel ('n trials');
+    PshortWTL=cell(1,2);PshortWTR=cell(1,2);
+    for i =1:length(LaserCond)
+    
+    WTnoFeedbackL = WT(~Feedback & ChoiceLeft == 1 & LaserTrial==LaserCond(i));
+    WTnoFeedbackR = WT(~Feedback & ChoiceLeft == 0 & LaserTrial==LaserCond(i));
+     meanWTL = nanmean(WTnoFeedbackL);
+    meanWTR = nanmean(WTnoFeedbackR);
+    subplot(2,4,7)
+    histogram(WTnoFeedbackL,10,'EdgeColor','none','FaceColor',ColorsCond{i});
+    line([meanWTL,meanWTL],get(gca,'YLim'),'Color',ColorsCond{i});
+    text(meanWTL-1,(1.05-0.1*(i-1))*(max(get(gca,'YLim'))-min(get(gca,'YLim'))),['m_l=',num2str(round(meanWTL*10)/10)],'Color',ColorsCond{i});
+    subplot(2,4,8)
+    histogram(WTnoFeedbackR,10,'EdgeColor','none','FaceColor',ColorsCond{i});
+    line([meanWTR,meanWTR],get(gca,'YLim'),'Color',ColorsCond{i});
+    text(meanWTL-1,(1.05-0.1*(i-1))*(max(get(gca,'YLim'))-min(get(gca,'YLim'))),['m_r=',num2str(round(meanWTR*10)/10)],'Color',ColorsCond{i});
+
+    PshortWTL{i} = sum(WTnoFeedbackL<MinWT)/sum(~isnan(WTnoFeedbackL));
+    PshortWTR{i} = sum(WTnoFeedbackR<MinWT)/sum(~isnan(WTnoFeedbackR));
+    
     end
-    for i = 1:size(RData,1)
-        RData(i,Idx(i):end) = NaN;
+    for i =1:length(LaserCond)
+        text(max(get(gca,'XLim'))+0.03,(0.85/i)*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['L_{2}=',num2str(round(PshortWTL{i}*100)/100),', R_{2}=',num2str(round(PshortWTR{i}*100)/100)],'Color',ColorsCond{i});
     end
-    [cta_chosenL,~]=CTA(LData(ChoiceLeftadj==1,:),ones(1,numel(LData(ChoiceLeftadj==1,:))),windowCTA);
-    [cta_chosenR,~]=CTA(RData(ChoiceLeftadj==0,:),ones(1,numel(LData(ChoiceLeftadj==0,:))),windowCTA);
-    [cta_alternativeL,~]=CTA(LData(ChoiceLeftadj==0,:),ones(1,numel(LData(ChoiceLeftadj==0,:))),windowCTA);
-    [cta_alternativeR,cta_time]=CTA(RData(ChoiceLeftadj==1,:),ones(1,numel(LData(ChoiceLeftadj==1,:))),windowCTA);
-    
-    cta_chosen = [cta_chosenL;cta_chosenR];
-    cta_alternative = [cta_alternativeL;cta_alternativeR];
-    
-    cta_chosen_mean = nanmean(cta_chosen,1);
-    cta_alternative_mean = nanmean(cta_alternative,1);
-    
-    plot(cta_time(cta_time>0)./1000,cta_chosen_mean(cta_time>0),'Color',[0,0,1],'LineWidth',2)
-    plot(cta_time(cta_time>0)./1000,cta_alternative_mean(cta_time>0),'Color',[1,0,0],'LineWidth',2)
-    xlabel('T-stimulus (s)')
-    ylabel('Excess clicks/s')
-    lowcut = quantile(ST(CompletedTrials&Index50Fifty),0.95);
-    xlim([0,lowcut])
-    % ylim([-15,15])
-    plot(get(gca,'XLim'),[.5,.5],'k--')
 end
 
 RedoTicks(gcf);
@@ -400,44 +400,6 @@ end
 
 end
 
-function Table = Times2Table(TimesCell,t)
-Table = zeros(length(TimesCell),t*1000);
-for i = 1 : length(TimesCell)
-    Table(i,ceil(TimesCell{i}*1000)) = 1;
-end
-end
-
-function Table = Times2TableFreq(TimesCell,t,Levels,shift)
-Table = zeros(length(TimesCell),t*1000);
-for i = 1 : length(TimesCell)
-    timepoints=ceil(find(ismember(TimesCell{i},Levels))*shift);%index times shift in ms
-    Table(i,timepoints) = 1;
-end
-end
-
-%Compute CTA
-%2nd dim of E has to be "time"
-function [cta2,t] = CTA(E,idx,win)
-T = size(E,2);
-
-cta = nan(size(E,1),2*T);
-
-for i = 1:size(E,1)
-    cta(i,T+1:T+T-idx(i)+1)=E(i,idx(i):end);
-    cta(i,T-idx(i)+1:T) = E(i,1:idx(i));
-end
-
-%subtract mean clicks and convert to per sec
-cta = (cta-repmat(nanmean(E,2),1,2*T))*1000;
-
-%smooth/window
-Wins = 1:win:2*T;
-cta2=nan(size(E,1),length(Wins));
-for i = 1:length(Wins)-1
-    cta2(:,i) = mean(cta(:,Wins(i):Wins(i+1)),2);
-end
-t = -T:win:T-1;
-end
 
 % sends mail from Torben's cshl gmail account
 % 3 or  4 inputs: address,subject,message,cell with attachment paths
@@ -465,9 +427,9 @@ elseif length(varargin)==5
     try
         %attachments need to be in full path (not ~) for linux systems
         for k =1:length(varargin{5})
-        if strcmp(varargin{5}{k}(1),'~')
-            varargin{5}{k} = fullfile('/home/torben',varargin{5}{k}(2:end));
-        end
+            if strcmp(varargin{5}{k}(1),'~')
+                varargin{5}{k} = fullfile('/home/torben',varargin{5}{k}(2:end));
+            end
         end
         
         sendmail(varargin{2},varargin{3},varargin{4},varargin{5})
@@ -485,12 +447,12 @@ function [R,P] = EvaluateVevaiometric(DV,WT)
 R = zeros(1,3);
 P=zeros(1,3);
 if sum(DV<=0)>0
-[R(1),P(1)] = corr(DV(DV<=0)',WT(DV<=0)','type','Spearman');
+    [R(1),P(1)] = corr(DV(DV<=0)',WT(DV<=0)','type','Spearman');
 end
 if sum(DV>0)>0
-[R(2),P(2)] = corr(DV(DV>0)',WT(DV>0)','type','Spearman');
+    [R(2),P(2)] = corr(DV(DV>0)',WT(DV>0)','type','Spearman');
 end
 if sum(~isnan(DV))>0
-[R(3),P(3)] = corr(abs(DV)',WT','type','Spearman');
+    [R(3),P(3)] = corr(abs(DV)',WT','type','Spearman');
 end
 end
