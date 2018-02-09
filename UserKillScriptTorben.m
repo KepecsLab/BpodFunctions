@@ -108,8 +108,11 @@ CatchTrial = BpodSystem.Data.Custom.CatchTrial((1:nTrials-1));
 Feedback = BpodSystem.Data.Custom.Feedback(1:nTrials-1);
 Correct = BpodSystem.Data.Custom.ChoiceCorrect(1:nTrials-1);
 WT =  BpodSystem.Data.Custom.FeedbackTime(1:nTrials-1);
-LaserTrial =  BpodSystem.Data.Custom.LaserTrial(1:nTrials-1);
-
+if isfield(BpodSystem.Data.Custom,'LaserTrial')
+    LaserTrial =  BpodSystem.Data.Custom.LaserTrial(1:nTrials-1);
+else
+    LaserTrial=false(1,nTrials);
+end
 %define "completed trial"
 % not that abvious for errors
 %Correct vector is 1 for correct choice, 0 for incorrect choice, nan
@@ -131,8 +134,8 @@ if TaskParameters.GUI.AuditoryStimulusType == 1 %click
     for t = 1 : length(ST)
         R = BpodSystem.Data.Custom.RightClickTrain{t};
         L = BpodSystem.Data.Custom.LeftClickTrain{t};
-        Ri = find(R>ST(t),1,'first'); if isempty(Ri), Ri=1; end
-        Li = find(L>ST(t),1,'first');if isempty(Li), Li=1; end
+        Ri = sum(R<=ST(t));if Ri==0, Ri=1; end
+        Li = sum(L<=ST(t));if Li==0, Li=1; end
         ExperiencedDV(t) = log10(Li/Ri);
         %         ExperiencedDV(t) = (Li-Ri)./(Li+Ri);
     end
