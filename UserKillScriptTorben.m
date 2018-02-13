@@ -278,12 +278,13 @@ for i =1:length(LaserCond)
     end
 end
 for i =1:length(LaserCond)
-    unit = max(get(gca,'YLim'))-min(get(gca,'YLim'));
-    text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.1+(i-1)*.5),['r_l=',num2str(round(Rcatch{i}(1)*100)/100),' r_r=',num2str(round(Rcatch{i}(2)*100)/100)],'Color',ColorsCorrect{i});
-    text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.2+(i-1)*.5),['r=',num2str(round(Rcatch{i}(3)*100)/100),', p=',num2str(round(Pcatch{i}(3)*100)/100)],'Color',ColorsCorrect{i});
-    text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.3+(i-1)*.5),['r_l=',num2str(round(Rerror{i}(1)*100)/100),' r_r=',num2str(round(Rerror{i}(2)*100)/100)],'Color',ColorsError{i});
-    text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.4+(i-1)*.5),['r=',num2str(round(Rerror{i}(3)*100)/100),', p=',num2str(round(Perror{i}(3)*100)/100)],'Color',ColorsError{i});
-    
+    if ~isempty(Rcatch{i}) && ~isempty(Pcatch{i}) && ~isempty(Rerror{i}) && ~isempty(Perror{i})
+        unit = max(get(gca,'YLim'))-min(get(gca,'YLim'));
+        text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.1+(i-1)*.5),['r_l=',num2str(round(Rcatch{i}(1)*100)/100),' r_r=',num2str(round(Rcatch{i}(2)*100)/100)],'Color',ColorsCorrect{i});
+        text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.2+(i-1)*.5),['r=',num2str(round(Rcatch{i}(3)*100)/100),', p=',num2str(round(Pcatch{i}(3)*100)/100)],'Color',ColorsCorrect{i});
+        text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.3+(i-1)*.5),['r_l=',num2str(round(Rerror{i}(1)*100)/100),' r_r=',num2str(round(Rerror{i}(2)*100)/100)],'Color',ColorsError{i});
+        text(max(get(gca,'XLim'))+0.03,max(get(gca,'YLim'))-unit*(0.4+(i-1)*.5),['r=',num2str(round(Rerror{i}(3)*100)/100),', p=',num2str(round(Perror{i}(3)*100)/100)],'Color',ColorsError{i});
+    end
 end
 
 
