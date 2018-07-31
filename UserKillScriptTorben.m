@@ -61,7 +61,7 @@ try
     %os
     os = getenv('OS');
     if strcmpi(os(1:min(7,length(os))),'windows')
-        servername = '\\kepecsdata\homes';
+        servername = '\\kepecsdata.cshl.edu\homes';
         user = strcat(getenv('username'));
     else
         servername = '/media/';
@@ -167,23 +167,35 @@ end
 CompletedTrials = CompletedTrials==1;
 CatchTrial = CatchTrial==1;
 
+%laser trials?
+if sum(LaserTrial)>0
+    LaserCond = [false;true];
+else
+    LaserCond=false;
+end
+CondColors={[0,0,0],[.9,.1,.1]};
+
 %%
 FigHandle = figure('Position',[ 360         187        1056         431],'NumberTitle','off','Name',Animal);
 % ExperiencedDV=DV;
+
 %Psychometric
 subplot(2,4,1)
 hold on
-AudDV = ExperiencedDV(CompletedTrials);
-if ~isempty(AudDV)
-    BinIdx = discretize(AudDV,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBin+1));
-    PsycY = grpstats(ChoiceLeft(CompletedTrials),BinIdx,'mean');
-    PsycX = grpstats(ExperiencedDV(CompletedTrials),BinIdx,'mean');
-    plot(PsycX,PsycY,'ok','MarkerFaceColor','k','MarkerEdgeColor','w','MarkerSize',6)
-    XFit = linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100);
-    YFit = glmval(glmfit(AudDV,ChoiceLeft(CompletedTrials)','binomial'),linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100),'logit');
-    plot(XFit,YFit,'k');
-    xlabel('DV');ylabel('p left')
-    text(0.95*min(get(gca,'XLim')),0.96*max(get(gca,'YLim')),[num2str(round(nanmean(Correct(CompletedTrials))*100)),'%,n=',num2str(nTrialsCompleted)]);
+for i = 1:length(LaserCond)
+    CompletedTrialsCond = CompletedTrials & LaserTrial == LaserCond(i);
+    AudDV = ExperiencedDV(CompletedTrialsCond);
+    if ~isempty(AudDV)
+        BinIdx = discretize(AudDV,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBin+1));
+        PsycY = grpstats(ChoiceLeft(CompletedTrialsCond),BinIdx,'mean');
+        PsycX = grpstats(ExperiencedDV(CompletedTrialsCond),BinIdx,'mean');
+        plot(PsycX,PsycY,'ok','MarkerFaceColor',CondColors{i},'MarkerEdgeColor','w','MarkerSize',6)
+        XFit = linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100);
+        YFit = glmval(glmfit(AudDV,ChoiceLeft(CompletedTrialsCond)','binomial'),linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100),'logit');
+        plot(XFit,YFit,'Color',CondColors{i});
+        xlabel('DV');ylabel('p left')
+        text(0.95*min(get(gca,'XLim')),0.96*max(get(gca,'YLim')),[num2str(round(nanmean(Correct(CompletedTrialsCond))*100)),'%,n=',num2str(nTrialsCompleted)]);
+    end
 end
 
 %conditioned psychometric
@@ -220,14 +232,9 @@ subplot(2,4,3)
 hold on
 xlabel('Waiting time (s)');ylabel('p correct')
 WTBin=5;
-CondColors={[0,0,0],[.9,.1,.1]};
 ColorsCorrect = {[.1,.9,.1],[.1,.8,.6]};
 ColorsError = {[.9,.1,.1],[.9,.1,.6]};
-if sum(LaserTrial)>0
-    LaserCond = [false;true];
-else
-    LaserCond=false;
-end
+
 for i =1:length(LaserCond)
     WTCatch = WT(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT & LaserTrial==LaserCond(i));
     if ~isempty(WTCatch)
