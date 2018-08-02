@@ -176,11 +176,11 @@ end
 CondColors={[0,0,0],[.9,.1,.1]};
 
 %%
-FigHandle = figure('Position',[ 360         187        1056         431],'NumberTitle','off','Name',Animal);
+FigHandle = figure('Position',[ 360         187        1056         598],'NumberTitle','off','Name',Animal);
 % ExperiencedDV=DV;
 
 %Psychometric
-subplot(2,4,1)
+subplot(3,4,1)
 hold on
 for i = 1:length(LaserCond)
     CompletedTrialsCond = CompletedTrials & LaserTrial == LaserCond(i);
@@ -199,7 +199,7 @@ for i = 1:length(LaserCond)
 end
 
 %conditioned psychometric
-subplot(2,4,2)
+subplot(3,4,2)
 hold on
 %low
 WTmed=median(WT(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT));
@@ -228,7 +228,7 @@ if ~isempty(AudDV)
 end
 
 %calibration
-subplot(2,4,3)
+subplot(3,4,3)
 hold on
 xlabel('Waiting time (s)');ylabel('p correct')
 WTBin=5;
@@ -249,11 +249,14 @@ end
 
 
 %Vevaiometric
-subplot(2,4,4)
+subplot(3,4,4)
 hold on
 xlabel('DV');ylabel('Waiting time (s)')
 AudDV = ExperiencedDV(CompletedTrials&CatchTrial&WT<MaxWT&WT>MinWT);
 Rcatch=cell(1,2);Pcatch=cell(1,2);Rerror=cell(1,2);Perror=cell(1,2);
+%for confidence auc
+auc = nan(length(LaserCond),1);
+auc_sem = nan(length(LaserCond),1);
 for i =1:length(LaserCond)
     
     WTCatch = WT(CompletedTrials&CatchTrial&Correct==1&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
@@ -281,6 +284,8 @@ for i =1:length(LaserCond)
         [Rc,Pc] = EvaluateVevaiometric(DVCatch,WTCatch);
         [Re,Pe] = EvaluateVevaiometric(DVError,WTError);
         Rcatch{i}=Rc;Pcatch{i}=Pc;Rerror{i}=Re;Perror{i}=Pe;
+        %confidence auc
+        [auc(i),~,auc_sem(i)] = rocarea(WTCatch,WTError,'bootstrap',200);
         
     end
 end
@@ -297,7 +302,7 @@ end
 
 
 %reaction time
-panel=subplot(2,4,5);
+panel=subplot(3,4,5);
 hold on
 if sum(CompletedTrials)>1
     center = linspace(min(ST(CompletedTrials)),max(ST(CompletedTrials)),15);
@@ -317,7 +322,7 @@ if sum(CompletedTrials)>1
 end
 
 %grace periods
-subplot(2,4,6)
+subplot(3,4,6)
 %remove "full" grace periods
 GracePeriods(GracePeriods>=GracePeriodsMax-0.001 & GracePeriods<=GracePeriodsMax+0.001 )=[];
 GracePeriodsR(GracePeriodsR>=GracePeriodsMax-0.001 & GracePeriodsR<=GracePeriodsMax+0.001 )=[];
@@ -339,7 +344,7 @@ end
 ColorsCond = {[.5,.5,.5],[.9,.1,.1]};
 if length(LaserCond)==1
     %no laser
-    subplot(2,4,7)
+    subplot(3,4,7)
     hold on
     xlabel('waiting time (s)'); ylabel ('n trials');
     WTnoFeedbackL = WT(~Feedback & ChoiceLeft == 1);
@@ -359,10 +364,10 @@ if length(LaserCond)==1
     text(max(get(gca,'XLim'))+0.03,0.85*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['L_{2}=',num2str(round(PshortWTL*100)/100),', R_{2}=',num2str(round(PshortWTR*100)/100)],'Color',[0,0,0]);
     
 else%laser
-    subplot(2,4,7)
+    subplot(3,4,7)
     hold on
     xlabel('waiting time (s)'); ylabel ('n trials');
-    subplot(2,4,8)
+    subplot(3,4,8)
     hold on
     xlabel('waiting time (s)'); ylabel ('n trials');
     PshortWTL=cell(1,2);PshortWTR=cell(1,2);
@@ -372,11 +377,11 @@ else%laser
     WTnoFeedbackR = WT(~Feedback & ChoiceLeft == 0 & LaserTrial==LaserCond(i));
      meanWTL = nanmean(WTnoFeedbackL);
     meanWTR = nanmean(WTnoFeedbackR);
-    subplot(2,4,7)
+    subplot(3,4,7)
     histogram(WTnoFeedbackL,10,'EdgeColor','none','FaceColor',ColorsCond{i});
     line([meanWTL,meanWTL],get(gca,'YLim'),'Color',ColorsCond{i});
     text(meanWTL-1,(1.05-0.1*(i-1))*(max(get(gca,'YLim'))-min(get(gca,'YLim'))),['m_l=',num2str(round(meanWTL*10)/10)],'Color',ColorsCond{i});
-    subplot(2,4,8)
+    subplot(3,4,8)
     histogram(WTnoFeedbackR,10,'EdgeColor','none','FaceColor',ColorsCond{i});
     line([meanWTR,meanWTR],get(gca,'YLim'),'Color',ColorsCond{i});
     text(meanWTL-1,(1.05-0.1*(i-1))*(max(get(gca,'YLim'))-min(get(gca,'YLim'))),['m_r=',num2str(round(meanWTR*10)/10)],'Color',ColorsCond{i});
@@ -389,6 +394,16 @@ else%laser
         text(max(get(gca,'XLim'))+0.03,(0.85/i)*(max(get(gca,'YLim'))-min(get(gca,'YLim')))+min(get(gca,'YLim')),['L_{2}=',num2str(round(PshortWTL{i}*100)/100),', R_{2}=',num2str(round(PshortWTR{i}*100)/100)],'Color',ColorsCond{i});
     end
 end
+
+%confidence index
+subplot(3,4,9)
+hold on
+for i =1:length(LaserCond)
+    errorbar(1:size(auc,2),auc(i,:),auc_sem(i,:),'o','MarkerFaceColor',CondColors{i},'MarkerEdgeColor',CondColors{i},'LineWidth',2,'Color',CondColors{i})
+end
+xlabel('DV quantile')
+ylabel('AUC')
+
 
 RedoTicks(gcf);
 
