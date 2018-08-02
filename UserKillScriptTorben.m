@@ -263,7 +263,7 @@ for i =1:length(LaserCond)
         if ~all(isnan(BinIdx))
             WTCatchY = grpstats(WTCatch,BinIdx,'mean');
             DVCatchX = grpstats(DVCatch,BinIdx,'mean');
-            plot(DVCatchX,WTCatchY,'g','LineWidth',2)
+            plot(DVCatchX,WTCatchY,'Color',ColorsCorrect{i},'LineWidth',2)
         end
         WTError = WT(CompletedTrials&Correct==0&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
         DVError = ExperiencedDV(CompletedTrials&Correct==0&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
@@ -271,7 +271,7 @@ for i =1:length(LaserCond)
         if ~all(isnan(BinIdx))
             WTErrorY = grpstats(WTError,BinIdx,'mean');
             DVErrorX = grpstats(DVError,BinIdx,'mean');
-            plot(DVErrorX,WTErrorY,'r','LineWidth',2)
+            plot(DVErrorX,WTErrorY,'Color',ColorsError{i},'LineWidth',2)
         end
         
         plot(DVCatch,WTCatch,'o','MarkerSize',2,'MarkerFaceColor',ColorsCorrect{i},'Color',ColorsCorrect{i})
