@@ -61,8 +61,9 @@ try
     %os
     os = getenv('OS');
     if strcmpi(os(1:min(7,length(os))),'windows')
-        servername = '\\kepecsdata.cshl.edu\homes';
-        user = strcat(getenv('username'));
+        servername = '\\uncertainty.cshl.edu\home'; %new uncertanity server (8/2018) works with home only
+%         user = strcat(getenv('username'));
+        user ='';
     else
         servername = '/media/';
         user='torben';
