@@ -8,7 +8,7 @@
 hostname=strcat(hostname);%hack to remove spaces
 
 %get ip address from xml file
-XML = xmlread('http://kepecsdata.cshl.edu/observer/rigdata/rigs.xml');
+XML = xmlread('http://uncertainty.cshl.edu/observer/rigdata/rigs.xml');
 rigs = XML.getElementsByTagName('rig');
 address = [];
 for k =0:rigs.getLength-1
