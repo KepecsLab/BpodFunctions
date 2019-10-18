@@ -91,7 +91,8 @@ global BpodSystem
 GracePeriodsMax = TaskParameters.GUI.FeedbackDelayGrace; %assumes same for each trial
 StimTime = TaskParameters.GUI.AuditoryStimulusTime; %assumes same for each trial
 MinWT = TaskParameters.GUI.VevaiometricMinWT; %assumes same for each trial
-MaxWT = 10;
+MinWT=5;
+MaxWT = 15;
 AudBin = 8; %Bins for psychometric
 AudBinWT = 6;%Bins for vevaiometric
 windowCTA = 150; %window for CTA (ms)
@@ -112,7 +113,7 @@ WT =  BpodSystem.Data.Custom.FeedbackTime(1:nTrials-1);
 if isfield(BpodSystem.Data.Custom,'LaserTrial')
     LaserTrial =  BpodSystem.Data.Custom.LaserTrial(1:nTrials-1);
 else
-    LaserTrial=false(1,nTrials);
+    LaserTrial=false(1,nTrials-1);
 end
 %define "completed trial"
 % not that abvious for errors
@@ -121,8 +122,12 @@ end
 %now: correct --> received feedback (reward)
 %     error --> always (if error catch)
 %     catch --> always (if choice happened)
+% AND not an interrupt trial
+InterruptRewarded = BpodSystem.Data.Custom.InterruptDelayRewarded(1:nTrials-1);
+InterruptSkipped = BpodSystem.Data.Custom.InterruptDelaySkipped(1:nTrials-1);
+RealInterruptTrials = InterruptRewarded | InterruptSkipped;
 
-CompletedTrials = (Feedback&Correct==1) | (Correct==0) | CatchTrial&~isnan(ChoiceLeft);
+CompletedTrials = ((Feedback&Correct==1) | (Correct==0) | CatchTrial&~isnan(ChoiceLeft)) & ~RealInterruptTrials;
 nTrialsCompleted = sum(CompletedTrials);
 
 %calculate exerienced dv
@@ -404,6 +409,56 @@ for i =1:length(LaserCond)
 end
 xlabel('DV quantile')
 ylabel('AUC')
+
+%interrupt waiting time distributions
+
+InterruptTrials = BpodSystem.Data.Custom.InterruptDelay;
+if any(InterruptTrials)
+    InterruptRewarded = BpodSystem.Data.Custom.InterruptDelayRewarded(1:nTrials-1);
+    InterruptSkipped = BpodSystem.Data.Custom.InterruptDelaySkipped(1:nTrials-1);
+    RealInterruptTrials = InterruptRewarded | InterruptSkipped;
+    NBinStartTime = 6;
+    BinStartTime = linspace(TaskParameters.GUI.InterruptStartMin,TaskParameters.GUI.InterruptStartMax,NBinStartTime+1);
+    
+    for i =1:NBinStartTime
+        idx = BpodSystem.Data.Custom.InterruptDelayStartTime(1:nTrials-1) > BinStartTime(i) & BpodSystem.Data.Custom.InterruptDelayStartTime(1:nTrials-1)<BinStartTime(i+1);
+        P_SkipInterrupt(i) = sum(InterruptSkipped(idx))/(sum(InterruptSkipped(idx))+sum(InterruptRewarded(idx)));
+    end
+    subplot(3,4,10)
+    plot(BinStartTime(1:end-1),P_SkipInterrupt,'.-k');
+    xlabel('Interrupt start time (s)')
+    ylabel('P(skip interrupt delay)')
+    
+    %trying out analyses, here:
+    % go through delay period and look at next X (x=1) seconds prob of
+    % leaving
+    NBinDelayTime = 6;
+    BinDelayTime = linspace(0.5,12,NBinDelayTime+1);
+    X=1;
+    P_SkipInterrupt=nan(1,NBinDelayTime);
+    P_Leave=nan(1,NBinDelayTime);
+    for i =1:NBinDelayTime
+        %skipped in first x seconds after interrupt cue
+        idx =  RealInterruptTrials  ...
+                & BpodSystem.Data.Custom.InterruptDelayStartTime(1:nTrials-1)>BinDelayTime(i) ... 
+                & BpodSystem.Data.Custom.InterruptDelayStartTime(1:nTrials-1)<BinDelayTime(i+1) ... 
+                & BpodSystem.Data.Custom.InterruptDelayTime(1:nTrials-1)>X;
+        idxSk = idx ...
+                & InterruptSkipped;
+              
+        P_SkipInterrupt(i) = sum(idxSk)/sum(idx);
+        %prob of leaving at time of interrupt cue
+        WTTrial = ((CompletedTrials & CatchTrial) | Correct==0) & ~RealInterruptTrials;
+        P_Leave(i) = sum(WTTrial & WT > BinDelayTime(i) & WT < BinDelayTime(i)+X) / sum(WTTrial & WT > BinDelayTime(i));
+    end
+   subplot(3,4,11), hold on
+   plot(BinDelayTime(1:end-1),P_SkipInterrupt,'-r');
+   plot(BinDelayTime(1:end-1),P_Leave,'-k');
+   xlabel('Interrupt start time (s)')
+   ylabel('P_leave < 1');
+end
+
+
 
 
 RedoTicks(gcf);
