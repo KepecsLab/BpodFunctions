@@ -1,7 +1,49 @@
 %Behavior analysis Olf2AFC
-function UserKillScriptTorben
+function UserKillScriptTorbenOffline(SessionDataPath)
+SessionDataPath={'K:\BpodData\TP44\Dual2AFC\Session Data\TP44_Dual2AFC_Nov05_2019_Session1.mat';...
+    'K:\BpodData\TP44\Dual2AFC\Session Data\TP44_Dual2AFC_Nov06_2019_Session1.mat';...
+    'K:\BpodData\TP44\Dual2AFC\Session Data\TP44_Dual2AFC_Nov07_2019_Session1.mat';...
+    'K:\BpodData\TP44\Dual2AFC\Session Data\TP44_Dual2AFC_Nov08_2019_Session1.mat';}
+if ~iscell(SessionDataPath)
+SessionDataPath={SessionDataPath};
+end
+AllData=struct('Custom',struct());
+for s=1:length(SessionDataPath)
+    A=load(SessionDataPath{s});
+    nT=A.SessionData.nTrials-1;
+    ff=fieldnames(A.SessionData.Custom);
+    for f=1:length(ff)
+        if size(A.SessionData.Custom.(ff{f}),2)>=nT
+            if isfield(AllData.Custom,ff{f})
+            AllData.Custom.(ff{f})= [ AllData.Custom.(ff{f}),  A.SessionData.Custom.(ff{f})(1,1:nT)];
+            else
+                AllData.Custom.(ff{f})=  A.SessionData.Custom.(ff{f})(1,1:nT);
+            end
+        end
+    end
+    if s>1
+    AllData.Custom.OriginalTrialIndex=[AllData.Custom.OriginalTrialIndex,1:nT];
+    AllData.Custom.SessionIndex=[AllData.Custom.SessionIndex,s*ones(1,nT)];
+    else
+    AllData.Custom.OriginalTrialIndex=1:nT;
+    AllData.Custom.SessionIndex=s*ones(1,nT);        
+    end
+end
 
+AllData.Custom.ChoiceLeft(AllData.Custom.OriginalTrialIndex<30)=NaN;
+AllData.nTrials=size(AllData.Custom.ChoiceLeft,2)+1;
+
+global TaskParameters
 global BpodSystem
+
+BpodSystem.Data=AllData;
+%use last session for rest
+SessionData=A.SessionData;
+BpodSystem.Animal=SessionData.Custom.Subject;
+BpodSystem.DataPath = SessionDataPath{1};
+
+TaskParameters=SessionData.TrialSettings(end-1);
+
 
 %load mail settings --> contains mail address & password & evernote e-mail address
 load('MailSettings.mat');%loads MailSettings struct
@@ -11,17 +53,18 @@ MailAddress = MailSettings.EvernoteMail;
 
 %save figure
 FigureFolder = fullfile(fileparts(fileparts(BpodSystem.DataPath)),'Session Figures');
-FigureHandle = BpodSystem.GUIHandles.OutcomePlot.HandleOutcome.Parent;
-FigureString = get(FigureHandle,'Name');
-[~, FigureName] = fileparts(BpodSystem.DataPath);
+% FigureHandle = BpodSystem.GUIHandles.OutcomePlot.HandleOutcome.Parent;
+% FigureString = get(FigureHandle,'Name');
+% 
 if ~isdir(FigureFolder)
     mkdir(FigureFolder);
 end
 
-FigurePath = fullfile(FigureFolder,[FigureName,'.png']);
-saveas(FigureHandle,FigurePath,'png');
+% FigurePath = fullfile(FigureFolder,[FigureName,'.png']);
+% saveas(FigureHandle,FigurePath,'png');
 
 %Analysis
+[~, FigureName] = fileparts(BpodSystem.DataPath);
 try
     FigAnalysis = Analysis();
     FigurePathAnalysis = fullfile(FigureFolder,[FigureName,'Analysis.png']);
@@ -34,52 +77,52 @@ end
 
 %send email
 
-[x,sessionfile] = fileparts(BpodSystem.DataPath);
-[~,animal] = fileparts(fileparts(fileparts(x)));
+[~,sessionfile] = fileparts(BpodSystem.DataPath);
+animal = SessionData.Custom.Subject;
 
 Subject = strcat(sessionfile,'@',animal);
 Body = sessionfile;
 
 if DidAnalysis
-    Attachment = {FigurePath,FigurePathAnalysis};
+    Attachment = {FigurePathAnalysis};
 else
-    Attachment = {FigurePath};
+    Attachment = {};
 end
 
 sent = SendMyMail(MailSettings,MailAddress,Subject,Body,Attachment);
 
 if sent
-    fprintf('Figure "%s" sent to %s.\n',FigureString,MailAddress);
+    fprintf('Figure "%s" sent to %s.\n','',MailAddress);
 else
     fprintf('Error:SendFigureTo:Mail could not be sent to %s.\n',MailAddress);
 end
 
 %% copy data to server
-try
-    
-    %%%%%
-    %os
-    os = getenv('OS');
-    if strcmpi(os(1:min(7,length(os))),'windows')
-        servername = '\\uncertainty.cshl.edu\home'; %new uncertanity server (8/2018) works with home only
-%         user = strcat(getenv('username'));
-        user ='';
-    else
-        servername = '/media/';
-        user='torben';
-    end
-    [~,subject] = fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
-    if ~isdir(fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'))
-        mkdir(fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'));
-    end
-    if ~isdir(fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'))
-        mkdir(fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'));
-    end
-    copyfile(BpodSystem.DataPath,fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'));
-    copyfile(BpodSystem.SettingsPath,fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'));
-catch
-    fprintf('Error copying data to server. Files not copied!\n');
-end
+% try
+%     
+%     %%%%%
+%     %os
+%     os = getenv('OS');
+%     if strcmpi(os(1:min(7,length(os))),'windows')
+%         servername = '\\uncertainty.cshl.edu\home'; %new uncertanity server (8/2018) works with home only
+% %         user = strcat(getenv('username'));
+%         user ='';
+%     else
+%         servername = '/media/';
+%         user='torben';
+%     end
+%     [~,subject] = fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
+%     if ~isdir(fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'))
+%         mkdir(fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'));
+%     end
+%     if ~isdir(fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'))
+%         mkdir(fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'));
+%     end
+%     copyfile(BpodSystem.DataPath,fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Data'));
+%     copyfile(BpodSystem.SettingsPath,fullfile(servername,user,'BpodData',subject,BpodSystem.CurrentProtocolName,'Session Settings'));
+% catch
+%     fprintf('Error copying data to server. Files not copied!\n');
+% end
 
 end
 
@@ -96,7 +139,7 @@ AudBin = 8; %Bins for psychometric
 AudBinWT = 6;%Bins for vevaiometric
 windowCTA = 150; %window for CTA (ms)
 
-[~,Animal]=fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
+Animal=BpodSystem.Animal;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -155,14 +198,14 @@ end
 GracePeriods=[];
 GracePeriodsL=[];
 GracePeriodsR=[];
-for t = 1 : length(ST)
-    GracePeriods = [GracePeriods;BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Rin_grace(:,2)-BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Rin_grace(:,1);BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Lin_grace(:,2)-BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Lin_grace(:,1)];
-    if ChoiceLeft(t) == 1
-        GracePeriodsL = [GracePeriodsL;BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Lin_grace(:,2)-BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Lin_grace(:,1)];
-    elseif ChoiceLeft(t)==0
-        GracePeriodsR = [GracePeriodsR;BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Rin_grace(:,2)-BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Rin_grace(:,1)];
-    end
-end
+% for t = 1 : length(ST)
+%     GracePeriods = [GracePeriods;BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Rin_grace(:,2)-BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Rin_grace(:,1);BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Lin_grace(:,2)-BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Lin_grace(:,1)];
+%     if ChoiceLeft(t) == 1
+%         GracePeriodsL = [GracePeriodsL;BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Lin_grace(:,2)-BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Lin_grace(:,1)];
+%     elseif ChoiceLeft(t)==0
+%         GracePeriodsR = [GracePeriodsR;BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Rin_grace(:,2)-BpodSystem.Data.RawEvents.Trial{t}.States.rewarded_Rin_grace(:,1)];
+%     end
+% end
 
 
 CompletedTrials = CompletedTrials==1;
