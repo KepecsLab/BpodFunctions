@@ -8,7 +8,20 @@
 hostname=strcat(hostname);%hack to remove spaces
 
 %get ip address from xml file
-XML = xmlread('http://uncertainty.cshl.edu/observer/rigdata/rigs.xml');
+try
+    %WUSTL
+    XML=xmlread('ip_cameras.xml');
+catch
+    %CSHL
+    try
+    XML = xmlread('http://uncertainty.cshl.edu/observer/rigdata/rigs.xml');
+    catch
+        warning('Could not find ip camera address.')
+    end
+end
+
+try 
+
 rigs = XML.getElementsByTagName('rig');
 address = [];
 for k =0:rigs.getLength-1
@@ -18,6 +31,10 @@ for k =0:rigs.getLength-1
         address = char(rig.getElementsByTagName('address').item(0).getFirstChild.getData);
         break
     end
+end
+
+catch
+    warning('Could not find rig in ip camera address file.')
 end
 
 %find vlc

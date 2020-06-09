@@ -61,7 +61,12 @@ try
     %os
     os = getenv('OS');
     if strcmpi(os(1:min(7,length(os))),'windows')
-        servername = '\\uncertainty.cshl.edu\home'; %new uncertanity server (8/2018) works with home only
+        [~,result]=system('ipconfig');
+        if contains(result,'172') || contains(result,'wustl') %%-->WUSTL address space
+            servername = '\\172.20.22.201\home';
+        else %--> CSHL address space
+            servername = '\\uncertainty.cshl.edu\home'; %new uncertanity server (8/2018) works with home only
+        end
 %         user = strcat(getenv('username'));
         user ='';
     else

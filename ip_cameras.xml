@@ -1,0 +1,58 @@
+<rigs>
+<rig>
+	<name>TORBEN-XPS</name>
+	<address>rtsp://admin:123456@172.20.22.239:554/profile2/</address>
+</rig>
+<rig>
+	<name>Allison-rig</name>
+	<address>rtsp://admin:123456@172.20.22.239:554/profile2/</address>
+</rig>
+<rig>
+	<name>Bob-rig</name>
+	<address>rtsp://admin:123456@172.20.22.238:554/profile2/</address>
+</rig>
+<rig>
+	<name>Carmen-rig</name>
+	<address>rtsp://admin:123456@172.20.22.237:554/profile2/</address>
+</rig>
+<rig>
+	<name>Dean-rig</name>
+	<address>rtsp://admin:123456@172.20.22.236:554/profile2/</address>
+</rig>
+<rig>
+	<name>Elena-rig</name>
+	<address>rtsp://admin:123456@172.20.22.235:554/profile2/</address>
+</rig>
+<rig>
+	<name>Floyd-rig</name>
+	<address>rtsp://admin:123456@172.20.22.234:554/profile2/</address>
+</rig>
+<rig>
+	<name>Gilbert-rig</name>
+	<address>rtsp://admin:123456@172.20.22.233:554/profile2/</address>
+</rig>
+<rig>
+	<name>Hattie-rig</name>
+	<address>rtsp://admin:123456@172.20.22.232:554/profile2/</address>
+</rig>
+<rig>
+	<name>Ione-rig</name>
+	<address>rtsp://admin:123456@172.20.22.231:554/profile2/</address>
+</rig>
+<rig>
+	<name>Joan-rig</name>
+	<address>rtsp://admin:123456@172.20.22.230:554/profile2/</address>
+</rig>
+<rig>
+	<name>Kenna-rig</name>
+	<address>rtsp://admin:123456@172.20.22.229:554/profile2/</address>
+</rig>
+<rig>
+	<name>Lenny-rig</name>
+	<address>rtsp://admin:123456@172.20.22.228:554/profile2/</address>
+</rig>
+<rig>
+	<name>Marilyn-rig</name>
+	<address>rtsp://admin:123456@172.20.22.227:554/profile2/</address>
+</rig>
+</rigs>
