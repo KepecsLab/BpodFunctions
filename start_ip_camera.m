@@ -47,10 +47,10 @@ else
     fprintf('Starting VLC from command failed.');
     return
 end
-
+ss
 %start vlc
 try
-    system(['start "" "',path,'" ', address]);
+    system(['start "" "',path,'" "', address,'"']);
 catch
         fprintf('Starting VLC from command failed.');
 end
