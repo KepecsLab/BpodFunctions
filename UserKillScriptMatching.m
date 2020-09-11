@@ -122,7 +122,7 @@ LeftHi(LeftHi==0)=TaskParameters.GUI.pLo/100;
 %vevaiometric    
 subplot(2,3,4)
 
-[ Mdl, logodds ] = LauGlim( BpodSystem );
+[ Mdl, logodds ] = LauGlim( BpodSystem.Data );
 
 ndxBaited = (BpodSystem.Data.Custom.Baited.Left & BpodSystem.Data.Custom.ChoiceLeft==1) | (BpodSystem.Data.Custom.Baited.Right & BpodSystem.Data.Custom.ChoiceLeft==0);
 ndxBaited = ndxBaited(:);
@@ -151,11 +151,13 @@ ChoiceKernelRwd_YData = Mdl.Coefficients.Estimate(7:11);
 ChoiceKernelCho_YData = Mdl.Coefficients.Estimate(2:6);
 intercept = Mdl.Coefficients.Estimate(1);
 plot(1:length(ChoiceKernelRwd_YData), ChoiceKernelRwd_YData)
+hold on
+
 plot(1:length(ChoiceKernelCho_YData), ChoiceKernelCho_YData)
 scatter(1,intercept,'filled')
 ylabel('coefficients')
 xlabel('n-trials back')
-legend(['rewardKernal','choiceKernal','intercept'])
+legend('rewardKernal','choiceKernal','intercept')
 
 %DV plot - psychometric
 subplot(2,3,6)
