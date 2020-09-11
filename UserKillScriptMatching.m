@@ -95,6 +95,7 @@ global BpodSystem
 
 [~,Animal]=fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
 FigHandle = figure('Position',[ 360         187        1056         598],'NumberTitle','off','Name',Animal);
+subplot(2,3,[1 2 3])
 
 nTrials=BpodSystem.Data.nTrials;
 ChoiceLeft = BpodSystem.Data.Custom.ChoiceLeft;
@@ -116,8 +117,48 @@ LeftHi(LeftHi==0)=TaskParameters.GUI.pLo/100;
         ylabel('pLeft')
         xlabel('trials')
     end
-        
+    
+    
+%vevaiometric    
+subplot(2,3,4)
 
+[ Mdl, logodds ] = LauGlim( BpodSystem );
+
+ndxBaited = (BpodSystem.Data.Custom.Baited.Left & BpodSystem.Data.Custom.ChoiceLeft==1) | (BpodSystem.Data.Custom.Baited.Right & BpodSystem.Data.Custom.ChoiceLeft==0);
+ndxBaited = ndxBaited(:);
+ndxValid = BpodSystem.Data.Custom.EarlyCout==0 & ~isnan(BpodSystem.Data.Custom.ChoiceLeft); ndxValid = ndxValid(:);
+ndxExploit = BpodSystem.Data.Custom.ChoiceLeft(:) == (logodds>0);
+ExploreScatter_XData = logodds(ndxValid & ~ndxBaited & ~ndxExploit);
+ExploreScatter_YData = BpodSystem.Data.Custom.FeedbackDelay(ndxValid & ~ndxBaited & ~ndxExploit)';
+ExploitScatter_XData = logodds(ndxValid & ~ndxBaited & ndxExploit);
+ExploitScatter_YData = BpodSystem.Data.Custom.FeedbackDelay(ndxValid & ~ndxBaited & ndxExploit)';
+[ExploreLine_XData, ExploreLine_YData] = binvevaio(ExploreScatter_XData,ExploreScatter_YData);
+[ExploitLine_XData, ExploitLine_YData] = binvevaio(ExploitScatter_XData,ExploitScatter_YData);
+
+plot(ExploreLine_XData, ExploreLine_YData, 'r')
+hold on;
+scatter(ExploitScatter_XData, ExploitScatter_YData,'r')
+
+plot(ExploitLine_XData, ExploitLine_YData,'g')
+scatter(ExploreScatter_XData, ExploreScatter_YData,'g')
+
+
+
+%GLM Fit
+subplot(2,3,5)
+
+ChoiceKernelRwd_YData = Mdl.Coefficients.Estimate(7:11);
+ChoiceKernelCho_YData = Mdl.Coefficients.Estimate(2:6);
+intercept = [1,1]*Mdl.Coefficients.Estimate(1);
+plot(ChoiceKernelRwd_YData)
+plot(ChoiceKernelCho_YData)
+scatter(1,intercept,'filled')
+ylabel('coefficients')
+xlabel('n-trials back')
+legend(['rewardKernal','choiceKernal','intercept'])
+
+%DV plot - psychometric
+subplot(2,3,6)
 
 
 end
