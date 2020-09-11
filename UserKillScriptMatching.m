@@ -149,9 +149,9 @@ subplot(2,3,5)
 
 ChoiceKernelRwd_YData = Mdl.Coefficients.Estimate(7:11);
 ChoiceKernelCho_YData = Mdl.Coefficients.Estimate(2:6);
-intercept = [1,1]*Mdl.Coefficients.Estimate(1);
-plot(ChoiceKernelRwd_YData)
-plot(ChoiceKernelCho_YData)
+intercept = Mdl.Coefficients.Estimate(1);
+plot(1:length(ChoiceKernelRwd_YData), ChoiceKernelRwd_YData)
+plot(1:length(ChoiceKernelCho_YData), ChoiceKernelCho_YData)
 scatter(1,intercept,'filled')
 ylabel('coefficients')
 xlabel('n-trials back')
@@ -204,3 +204,54 @@ else
 end
 
 end
+
+function [ mdl, logodds ] = LauGlim( SessionData )
+%LAUGLIM Statistical model to predict single trial choice behavior as in
+%Lau and Glimcher's JEAB paper (2005?)
+
+y = SessionData.Custom.ChoiceLeft(:);
+C = y;
+C(y==0) = -1;
+R = SessionData.Custom.Rewarded(:).*C; % hopefully vectors of same length at all times
+C = repmat(C,1,5);
+R = repmat(R,1,5);
+
+for j = 1:size(C,2)
+    C(:,j) = circshift(C(:,j),j);
+    C(1:j,j) = 0;
+    R(:,j) = circshift(R(:,j),j);
+    R(1:j,j) = 0;
+end
+
+X = [C, R];
+X(isnan(X)) = 0;
+mdl = fitglm(X,y,'distribution','binomial');
+logodds = mdl.predict(X);
+logodds = log(logodds) - log(1-logodds);
+end
+
+function [ newxdata, newydata ] = binvevaio( xdata, ydata, nbins )
+%UNTITLED Summary of this function goes here
+%   Detailed explanation goes here
+
+xdata = xdata(:);
+ydata = ydata(:);
+
+if nargin < 3
+    nbins = ceil(numel(xdata)/10);
+end
+
+newxdata = nan(nbins,1);
+newydata = nan(nbins,1);
+ndx = nan(numel(xdata),1);
+
+for ibin = 1:nbins
+%     newxdata = prctile(xdata,100*ibin/nbins);
+    ndx(isnan(ndx) & xdata <= prctile(xdata,100*ibin/nbins)) = ibin;
+    newxdata(ibin) = mean(xdata(ndx==ibin));
+    newydata(ibin) = mean(ydata(ndx==ibin));
+end
+end
+
+
+
