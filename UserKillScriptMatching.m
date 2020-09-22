@@ -93,34 +93,47 @@ function FigHandle = Analysis()
 global TaskParameters
 global BpodSystem
 
-[~,Animal]=fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
-FigHandle = figure('Position',[ 360         187        1056         598],'NumberTitle','off','Name',Animal);
-subplot(2,3,[1 2 3])
+offline=false;
+if offline
+    BpodSystem.Data=SessionData;
+    TaskParameters = SessionData.Settings;
+    Animal ='Unknown';
+else
+    [~,Animal]=fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
+end
+    
 
+
+FigHandle = figure('Position',[ 360         187        1056         598],'NumberTitle','off','Name',Animal,'Color',[1,1,1]);
 nTrials=BpodSystem.Data.nTrials;
 ChoiceLeft = BpodSystem.Data.Custom.ChoiceLeft;
-
 LeftHi=double(BpodSystem.Data.Custom.LeftHi);
 LeftHi(LeftHi==1)=TaskParameters.GUI.pHi/100;
 LeftHi(LeftHi==0)=TaskParameters.GUI.pLo/100;
+
+%plot running choice average
+subplot(2,3,[1 2 3])
+
+if ~isempty(ChoiceLeft)
+    Xdata = 1:nTrials-1;
+    Ydata = LeftHi(1:nTrials-1);
     
-    if ~isempty(ChoiceLeft)
-        Xdata = 1:nTrials-1;
-        Ydata = LeftHi(1:nTrials-1);
-        
-        plot(Xdata,Ydata);
-        hold on;
-        
-        smoothChoice = smooth(ChoiceLeft, 10, 'moving','omitnan');
-        Ydata=smoothChoice(1:nTrials-1);
-        plot(Xdata,Ydata);
-        ylabel('pLeft')
-        xlabel('trials')
-    end
+    plot(Xdata,Ydata,'-k','Color',[.5,.5,.5],'LineWidth',2);
+    hold on;
+    
+    smoothChoice = smooth(ChoiceLeft, 10, 'moving','omitnan');
+    Ydata=smoothChoice(1:nTrials-1);
+    plot(Xdata,Ydata,'-k','LineWidth',2);
+    ylabel('P(Left)')
+    xlabel('Trials')
+    ylim([0,1])
+    xlim([0,nTrials])
+end
     
     
-%vevaiometric    
+%plot vevaiometric    
 subplot(2,3,4)
+hold on
 
 [ Mdl, logodds ] = LauGlim( BpodSystem.Data );
 
@@ -135,32 +148,52 @@ ExploitScatter_YData = BpodSystem.Data.Custom.FeedbackDelay(ndxValid & ~ndxBaite
 [ExploreLine_XData, ExploreLine_YData] = binvevaio(ExploreScatter_XData,ExploreScatter_YData);
 [ExploitLine_XData, ExploitLine_YData] = binvevaio(ExploitScatter_XData,ExploitScatter_YData);
 
-plot(ExploreLine_XData, ExploreLine_YData, 'r')
-hold on;
-scatter(ExploitScatter_XData, ExploitScatter_YData,'r')
 
-plot(ExploitLine_XData, ExploitLine_YData,'g')
-scatter(ExploreScatter_XData, ExploreScatter_YData,'g')
-
-
+scatter(ExploitScatter_XData, ExploitScatter_YData,'.g','MarkerFaceColor','g')
+scatter(ExploreScatter_XData, ExploreScatter_YData,'.r','MarkerFaceColor','r')
+plot(ExploreLine_XData, ExploreLine_YData, 'r','LineWidth',3)
+plot(ExploitLine_XData, ExploitLine_YData,'g','LineWidth',3)
+ylim([min([ExploitScatter_YData;ExploreScatter_YData]),max([ExploitScatter_YData;ExploreScatter_YData])])
+xlim([-max(abs([ExploitScatter_XData;ExploreScatter_XData])),max(abs([ExploitScatter_XData;ExploreScatter_XData]))])
+xlabel('log odds')
+ylabel('Waiting time (s)')
 
 %GLM Fit
 subplot(2,3,5)
+hold on
 
 ChoiceKernelRwd_YData = Mdl.Coefficients.Estimate(7:11);
 ChoiceKernelCho_YData = Mdl.Coefficients.Estimate(2:6);
 intercept = Mdl.Coefficients.Estimate(1);
-plot(1:length(ChoiceKernelRwd_YData), ChoiceKernelRwd_YData)
-hold on
 
-plot(1:length(ChoiceKernelCho_YData), ChoiceKernelCho_YData)
-scatter(1,intercept,'filled')
-ylabel('coefficients')
+plot(1:length(ChoiceKernelRwd_YData), ChoiceKernelRwd_YData,'LineWidth',2,'Color',[.3,.2,.9])
+plot(1:length(ChoiceKernelCho_YData), ChoiceKernelCho_YData,'LineWidth',2,'Color',[.8,.2,.8])
+scatter(1,intercept,'filled','MarkerFaceColor','k')
+plot([1,length(ChoiceKernelRwd_YData)],[intercept,intercept],'--k')
+xlim([1,length(ChoiceKernelRwd_YData)])
+ylabel('Coefficient')
 xlabel('n-trials back')
-legend('rewardKernal','choiceKernal','intercept')
+l=legend('rewardKernel','choiceKernel','intercept');
+l.Box='off';
 
 %DV plot - psychometric
 subplot(2,3,6)
+hold on
+ndxValid =~isnan(BpodSystem.Data.Custom.ChoiceLeft); ndxValid = ndxValid(:);
+ChoiceLeft = BpodSystem.Data.Custom.ChoiceLeft(ndxValid);
+DV = logodds(ndxValid);
+dvbin=linspace(-max(abs(DV)),max(abs(DV)),10);
+[x,y,e]=BinData(DV,ChoiceLeft,dvbin);
+vv=~isnan(x) & ~isnan(y) & ~isnan(e);
+errorbar(x(vv),y(vv),e(vv),'k','LineStyle','none','LineWidth',2,'Marker','o','MarkerFaceColor','k')
+xlim([dvbin(1),dvbin(end)]);
+ylim([0,1])
+xlabel('log odds')
+ylabel('P(Left)')
+%fit
+mdl = fitglm(DV,ChoiceLeft(:),'Distribution','binomial');
+xx=linspace(dvbin(1),dvbin(end),100);
+plot(xx,predict(mdl,xx'),'-k')
 
 
 end
@@ -233,8 +266,8 @@ logodds = log(logodds) - log(1-logodds);
 end
 
 function [ newxdata, newydata ] = binvevaio( xdata, ydata, nbins )
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+UNTITLED Summary of this function goes here
+  Detailed explanation goes here
 
 xdata = xdata(:);
 ydata = ydata(:);
@@ -248,7 +281,7 @@ newydata = nan(nbins,1);
 ndx = nan(numel(xdata),1);
 
 for ibin = 1:nbins
-%     newxdata = prctile(xdata,100*ibin/nbins);
+    newxdata = prctile(xdata,100*ibin/nbins);
     ndx(isnan(ndx) & xdata <= prctile(xdata,100*ibin/nbins)) = ibin;
     newxdata(ibin) = mean(xdata(ndx==ibin));
     newydata(ibin) = mean(ydata(ndx==ibin));
