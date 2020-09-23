@@ -30,6 +30,7 @@ try
     DidAnalysis = true;
 catch
     DidAnalysis = false;
+    fprintf('Failed to run analysis function\n');
 end
 
 %send email
@@ -130,12 +131,19 @@ if ~isempty(ChoiceLeft)
     xlim([0,nTrials])
 end
     
-    
+ %run lau/glimcher model
+try
+    [ Mdl, logodds ] = LauGlim( BpodSystem.Data );
+    succ=true;
+catch
+    fprintf('Failed to run LauGlim model\n');
+    succ=false;
+end
+
+if succ
 %plot vevaiometric    
 subplot(2,3,4)
 hold on
-
-[ Mdl, logodds ] = LauGlim( BpodSystem.Data );
 
 ndxBaited = (BpodSystem.Data.Custom.Baited.Left & BpodSystem.Data.Custom.ChoiceLeft==1) | (BpodSystem.Data.Custom.Baited.Right & BpodSystem.Data.Custom.ChoiceLeft==0);
 ndxBaited = ndxBaited(:);
@@ -152,9 +160,14 @@ ExploitScatter_YData = BpodSystem.Data.Custom.FeedbackDelay(ndxValid & ~ndxBaite
 scatter(ExploitScatter_XData, ExploitScatter_YData,'.g','MarkerFaceColor','g')
 scatter(ExploreScatter_XData, ExploreScatter_YData,'.r','MarkerFaceColor','r')
 plot(ExploreLine_XData, ExploreLine_YData, 'r','LineWidth',3)
+
 plot(ExploitLine_XData, ExploitLine_YData,'g','LineWidth',3)
+try
 ylim([min([ExploitScatter_YData;ExploreScatter_YData]),max([ExploitScatter_YData;ExploreScatter_YData])])
 xlim([-max(abs([ExploitScatter_XData;ExploreScatter_XData])),max(abs([ExploitScatter_XData;ExploreScatter_XData]))])
+catch
+end
+
 xlabel('log odds')
 ylabel('Waiting time (s)')
 
@@ -186,8 +199,10 @@ dvbin=linspace(-max(abs(DV)),max(abs(DV)),10);
 [x,y,e]=BinData(DV,ChoiceLeft,dvbin);
 vv=~isnan(x) & ~isnan(y) & ~isnan(e);
 errorbar(x(vv),y(vv),e(vv),'k','LineStyle','none','LineWidth',2,'Marker','o','MarkerFaceColor','k')
-xlim([dvbin(1),dvbin(end)]);
+
+xlim([dvbin(1),dvbin(end)+eps]);
 ylim([0,1])
+
 xlabel('log odds')
 ylabel('P(Left)')
 %fit
@@ -195,6 +210,7 @@ mdl = fitglm(DV,ChoiceLeft(:),'Distribution','binomial');
 xx=linspace(dvbin(1),dvbin(end),100);
 plot(xx,predict(mdl,xx'),'-k')
 
+end%succ
 
 end
 
@@ -266,8 +282,8 @@ logodds = log(logodds) - log(1-logodds);
 end
 
 function [ newxdata, newydata ] = binvevaio( xdata, ydata, nbins )
-UNTITLED Summary of this function goes here
-  Detailed explanation goes here
+%  UNTITLED Summary of this function goes here
+%   Detailed explanation goes here
 
 xdata = xdata(:);
 ydata = ydata(:);
