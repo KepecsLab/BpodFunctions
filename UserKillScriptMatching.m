@@ -215,11 +215,13 @@ ExploitScatter_YData = BpodSystem.Data.Custom.FeedbackDelay(ndxValid & ~ndxBaite
 [ExploitLine_XData, ExploitLine_YData] = binvevaio(ExploitScatter_XData,ExploitScatter_YData,10);
 
 
-scatter(ExploitScatter_XData, ExploitScatter_YData,'.g','MarkerFaceColor','g')
-scatter(ExploreScatter_XData, ExploreScatter_YData,'.r','MarkerFaceColor','r')
-plot(ExploreLine_XData, ExploreLine_YData, 'r','LineWidth',3)
-plot(ExploitLine_XData, ExploitLine_YData,'g','LineWidth',3)
-
+scatter(ExploitScatter_XData, ExploitScatter_YData,'.g','MarkerFaceColor','g');
+scatter(ExploreScatter_XData, ExploreScatter_YData,'.r','MarkerFaceColor','r');
+h1=plot(ExploreLine_XData, ExploreLine_YData, 'r','LineWidth',3);
+h2=plot(ExploitLine_XData, ExploitLine_YData,'g','LineWidth',3);
+l=legend([h1,h2],{'Explore','Exploit'});
+l.Box='off';
+l.Location='northwest';
 try
 ylim([min([ExploitScatter_YData;ExploreScatter_YData]),max([ExploitScatter_YData;ExploreScatter_YData])])
 xlim([-max(abs([ExploitScatter_XData;ExploreScatter_XData])),max(abs([ExploitScatter_XData;ExploreScatter_XData]))])
