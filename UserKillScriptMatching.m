@@ -104,8 +104,8 @@ else
 end
     
 
-
-FigHandle = figure('Position',[ 360         187        1056         598],'NumberTitle','off','Name',Animal,'Color',[1,1,1]);
+%%
+FigHandle = figure('Position',[  385         170        1056         762],'NumberTitle','off','Name',Animal,'Color',[1,1,1]);
 nTrials=BpodSystem.Data.nTrials;
 ChoiceLeft = BpodSystem.Data.Custom.ChoiceLeft;
 LeftHi=double(BpodSystem.Data.Custom.LeftHi);
@@ -113,7 +113,7 @@ LeftHi(LeftHi==1)=TaskParameters.GUI.pHi/100;
 LeftHi(LeftHi==0)=TaskParameters.GUI.pLo/100;
 
 %plot running choice average
-subplot(2,3,[1 2 3])
+subplot(3,3,[1 2 3])
 
 if ~isempty(ChoiceLeft)
     Xdata = 1:nTrials-1;
@@ -141,38 +141,9 @@ catch
 end
 
 if succ
-%plot vevaiometric    
-subplot(2,3,4)
-hold on
-
-ndxBaited = (BpodSystem.Data.Custom.Baited.Left & BpodSystem.Data.Custom.ChoiceLeft==1) | (BpodSystem.Data.Custom.Baited.Right & BpodSystem.Data.Custom.ChoiceLeft==0);
-ndxBaited = ndxBaited(:);
-ndxValid = BpodSystem.Data.Custom.EarlyCout==0 & ~isnan(BpodSystem.Data.Custom.ChoiceLeft); ndxValid = ndxValid(:);
-ndxExploit = BpodSystem.Data.Custom.ChoiceLeft(:) == (logodds>0);
-ExploreScatter_XData = logodds(ndxValid & ~ndxBaited & ~ndxExploit);
-ExploreScatter_YData = BpodSystem.Data.Custom.FeedbackDelay(ndxValid & ~ndxBaited & ~ndxExploit)';
-ExploitScatter_XData = logodds(ndxValid & ~ndxBaited & ndxExploit);
-ExploitScatter_YData = BpodSystem.Data.Custom.FeedbackDelay(ndxValid & ~ndxBaited & ndxExploit)';
-[ExploreLine_XData, ExploreLine_YData] = binvevaio(ExploreScatter_XData,ExploreScatter_YData);
-[ExploitLine_XData, ExploitLine_YData] = binvevaio(ExploitScatter_XData,ExploitScatter_YData);
-
-
-scatter(ExploitScatter_XData, ExploitScatter_YData,'.g','MarkerFaceColor','g')
-scatter(ExploreScatter_XData, ExploreScatter_YData,'.r','MarkerFaceColor','r')
-plot(ExploreLine_XData, ExploreLine_YData, 'r','LineWidth',3)
-
-plot(ExploitLine_XData, ExploitLine_YData,'g','LineWidth',3)
-try
-ylim([min([ExploitScatter_YData;ExploreScatter_YData]),max([ExploitScatter_YData;ExploreScatter_YData])])
-xlim([-max(abs([ExploitScatter_XData;ExploreScatter_XData])),max(abs([ExploitScatter_XData;ExploreScatter_XData]))])
-catch
-end
-
-xlabel('log odds')
-ylabel('Waiting time (s)')
-
+    
 %GLM Fit
-subplot(2,3,5)
+subplot(3,3,4)
 hold on
 
 ChoiceKernelRwd_YData = Mdl.Coefficients.Estimate(7:11);
@@ -190,7 +161,7 @@ l=legend('rewardKernel','choiceKernel','intercept');
 l.Box='off';
 
 %DV plot - psychometric
-subplot(2,3,6)
+subplot(3,3,5)
 hold on
 ndxValid =~isnan(BpodSystem.Data.Custom.ChoiceLeft); ndxValid = ndxValid(:);
 ChoiceLeft = BpodSystem.Data.Custom.ChoiceLeft(ndxValid);
@@ -209,6 +180,94 @@ ylabel('P(Left)')
 mdl = fitglm(DV,ChoiceLeft(:),'Distribution','binomial');
 xx=linspace(dvbin(1),dvbin(end),100);
 plot(xx,predict(mdl,xx'),'-k')
+
+%'calibration' plot
+subplot(3,3,7)
+hold on
+ndxBaited = (BpodSystem.Data.Custom.Baited.Left & BpodSystem.Data.Custom.ChoiceLeft==1) | (BpodSystem.Data.Custom.Baited.Right & BpodSystem.Data.Custom.ChoiceLeft==0);
+ndxBaited = ndxBaited(:);
+ndxValid = BpodSystem.Data.Custom.EarlyCout==0 & ~isnan(BpodSystem.Data.Custom.ChoiceLeft); ndxValid = ndxValid(:);
+ndxExploit = BpodSystem.Data.Custom.ChoiceLeft(:) == (logodds>0);
+
+ti = BpodSystem.Data.Custom.FeedbackDelay(ndxValid & ~ndxBaited);
+left = BpodSystem.Data.Custom.ChoiceLeft(ndxValid & ~ndxBaited)==1;
+corr = ndxExploit(ndxValid & ~ndxBaited); %'correct'
+edges = linspace(min(ti),max(ti),8);
+[x,y,e]=BinData(ti,corr,edges);
+vv=~isnan(x) & ~isnan(y) & ~isnan(e);
+errorbar(x(vv),y(vv),e(vv),'Color','k','LineWidth',2)
+xlabel('Time investment (s)')
+ylabel('Percent exploit')
+
+%plot vevaiometric    
+subplot(3,3,8)
+hold on
+
+ndxBaited = (BpodSystem.Data.Custom.Baited.Left & BpodSystem.Data.Custom.ChoiceLeft==1) | (BpodSystem.Data.Custom.Baited.Right & BpodSystem.Data.Custom.ChoiceLeft==0);
+ndxBaited = ndxBaited(:);
+ndxValid = BpodSystem.Data.Custom.EarlyCout==0 & ~isnan(BpodSystem.Data.Custom.ChoiceLeft); ndxValid = ndxValid(:);
+ndxExploit = BpodSystem.Data.Custom.ChoiceLeft(:) == (logodds>0);
+ExploreScatter_XData = logodds(ndxValid & ~ndxBaited & ~ndxExploit);
+ExploreScatter_YData = BpodSystem.Data.Custom.FeedbackDelay(ndxValid & ~ndxBaited & ~ndxExploit)';
+ExploitScatter_XData = logodds(ndxValid & ~ndxBaited & ndxExploit);
+ExploitScatter_YData = BpodSystem.Data.Custom.FeedbackDelay(ndxValid & ~ndxBaited & ndxExploit)';
+[ExploreLine_XData, ExploreLine_YData] = binvevaio(ExploreScatter_XData,ExploreScatter_YData,10);
+[ExploitLine_XData, ExploitLine_YData] = binvevaio(ExploitScatter_XData,ExploitScatter_YData,10);
+
+
+scatter(ExploitScatter_XData, ExploitScatter_YData,'.g','MarkerFaceColor','g')
+scatter(ExploreScatter_XData, ExploreScatter_YData,'.r','MarkerFaceColor','r')
+plot(ExploreLine_XData, ExploreLine_YData, 'r','LineWidth',3)
+plot(ExploitLine_XData, ExploitLine_YData,'g','LineWidth',3)
+
+try
+ylim([min([ExploitScatter_YData;ExploreScatter_YData]),max([ExploitScatter_YData;ExploreScatter_YData])])
+xlim([-max(abs([ExploitScatter_XData;ExploreScatter_XData])),max(abs([ExploitScatter_XData;ExploreScatter_XData]))])
+catch
+end
+
+xlabel('log odds')
+ylabel('Time investment (s)')
+
+%'condition psychometry'
+%DV plot - psychometric
+subplot(3,3,9)
+Colors={[0,0,.9];[.5,.5,1]}; %high/low
+hold on
+ChoiceLeft = BpodSystem.Data.Custom.ChoiceLeft(ndxValid & ~ndxBaited);ChoiceLeft=ChoiceLeft(:);
+DV = logodds(ndxValid & ~ndxBaited);DV=DV(:);
+TI = BpodSystem.Data.Custom.FeedbackDelay(ndxValid & ~ndxBaited);
+TImed=nanmedian(TI);
+high = TI>TImed;
+low = TI<=TImed;
+dvbin=linspace(-max(abs(DV)),max(abs(DV)),10);
+%high TI
+[x,y,e]=BinData(DV(high),ChoiceLeft(high),dvbin);
+vv=~isnan(x) & ~isnan(y) & ~isnan(e);
+h1=errorbar(x(vv),y(vv),e(vv),'LineStyle','none','LineWidth',2,'Marker','o','MarkerFaceColor',Colors{1},'MarkerEdgeColor',Colors{1},'Color',Colors{1});
+%fit
+mdl = fitglm(DV(high),ChoiceLeft(high),'Distribution','binomial');
+xx=linspace(dvbin(1),dvbin(end),100);
+plot(xx,predict(mdl,xx'),'-','Color',Colors{1});
+
+%low TI
+[x,y,e]=BinData(DV(low),ChoiceLeft(low),dvbin);
+vv=~isnan(x) & ~isnan(y) & ~isnan(e);
+h2=errorbar(x(vv),y(vv),e(vv),'LineStyle','none','LineWidth',2,'Marker','o','MarkerFaceColor',Colors{2},'MarkerEdgeColor',Colors{2},'Color',Colors{2});
+%fit
+mdl = fitglm(DV(low),ChoiceLeft(low),'Distribution','binomial');
+xx=linspace(dvbin(1),dvbin(end),100);
+plot(xx,predict(mdl,xx'),'-','Color',Colors{2});
+
+xlim([dvbin(1),dvbin(end)+eps]);
+ylim([0,1])
+
+xlabel('log odds')
+ylabel('P(Left)')
+
+l=legend([h1,h2],{'High TI','Low TI'});
+l.Box='off';
+l.Location='northwest';
 
 end%succ
 
@@ -297,7 +356,7 @@ newydata = nan(nbins,1);
 ndx = nan(numel(xdata),1);
 
 for ibin = 1:nbins
-    newxdata = prctile(xdata,100*ibin/nbins);
+%     newxdata = prctile(xdata,100*ibin/nbins);
     ndx(isnan(ndx) & xdata <= prctile(xdata,100*ibin/nbins)) = ibin;
     newxdata(ibin) = mean(xdata(ndx==ibin));
     newydata(ibin) = mean(ydata(ndx==ibin));
