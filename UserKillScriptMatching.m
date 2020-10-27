@@ -20,6 +20,10 @@ end
 
 FigurePath = fullfile(FigureFolder,[FigureName,'.png']);
 saveas(FigureHandle,FigurePath,'png');
+try
+    close(FigureHandle)
+catch
+end
 
 %Analysis
 try
@@ -31,6 +35,28 @@ try
 catch
     DidAnalysis = false;
     fprintf('Failed to run analysis function\n');
+    try
+        close(FigAnalysis)
+    catch
+    end
+end
+
+%check whether there are photometry figures to add to mail
+try
+    FigurePathPhotometry1 = fullfile(FigureFolder,[FigureName,'Photometry1.png']);
+    saveas(BpodSystem.GUIHandles.PhotometryPlot1,FigurePathPhotometry1,'png');
+    close(BpodSystem.GUIHandles.PhotometryPlot1)
+    AddPhotometry = true;
+    PhotometryPath = {FigurePathPhotometry1};
+    try
+        FigurePathPhotometry2 = fullfile(FigureFolder,[FigureName,'Photometry2.png']);
+        saveas(BpodSystem.GUIHandles.PhotometryPlot2,FigurePathPhotometry2,'png');
+        close(BpodSystem.GUIHandles.PhotometryPlot2)
+        PhotometryPath = {FigurePathPhotometry1, FigurePathPhotometry2};
+    catch
+    end
+catch
+    AddPhotometry = false;
 end
 
 %send email
@@ -45,6 +71,9 @@ if DidAnalysis
     Attachment = {FigurePath,FigurePathAnalysis};
 else
     Attachment = {FigurePath};
+end
+if AddPhotometry
+    Attachment = [Attachment, PhotometryPath];
 end
 
 sent = SendMyMail(MailSettings,MailAddress,Subject,Body,Attachment);
