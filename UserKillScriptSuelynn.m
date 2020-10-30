@@ -107,11 +107,6 @@ end
 %%
 FigHandle = figure('Position',[  385         170        1056         762],'NumberTitle','off','Name',Animal,'Color',[1,1,1]);
 
-try
-S=concatSession(BpodSystem.Data.Custom);
-catch
-end
-
 
 nTrials=BpodSystem.Data.nTrials;
 ChoiceLeft = BpodSystem.Data.Custom.ChoiceLeft(1:nTrials-1);
@@ -119,8 +114,100 @@ ST = BpodSystem.Data.Custom.ST(1:nTrials-1);
 ExperiencedDV=zeros(1,length(ST));
 AudBin=8;
 
-LeftClickTrain = BpodSystem.Data.Custom.LeftClickTrain(1:nTrials-1);
-RightClickTrain = BpodSystem.Data.Custom.RightClickTrain(1:nTrials-1);
+%define trial types
+%define block transitions
+logicBlock=abs(BpodSystem.Data.Custom.BlockNumberL(1:end-1)-BpodSystem.Data.Custom.BlockNumberL(2:end));
+blockIndex=find(logicBlock==1); 
+
+%for plotting - block index of completed trials (e.g. ignore nans)
+a=BpodSystem.Data.Custom.BlockNumberL(~isnan(ChoiceLeft));
+plotBlockIdx=a(1:end-1)-a(2:end);
+plotBlockIdx=abs(plotBlockIdx);
+blockIndex_omitNan=find(plotBlockIdx==1);
+
+
+leftLarge=BpodSystem.Data.Custom.RewardMagnitude(:,1)>BpodSystem.Data.Custom.RewardMagnitude(:,2);
+rightLarge=BpodSystem.Data.Custom.RewardMagnitude(:,1)<BpodSystem.Data.Custom.RewardMagnitude(:,2);
+controlMag=BpodSystem.Data.Custom.RewardMagnitude(:,1)==BpodSystem.Data.Custom.RewardMagnitude(:,2);
+
+
+%blockType %2 columns - 1 reward 2 variance
+blockTable=zeros(length(unique(BpodSystem.Data.Custom.BlockNumberL)),2);
+%left large = 1. right large=2, control=3
+%queries block index end of each block and the last trial of the session
+%for end block
+blockTable(leftLarge([blockIndex, nTrials-1]),1)=1;
+blockTable(rightLarge([blockIndex, nTrials-1]),1)=2;
+blockTable(controlMag([blockIndex, nTrials-1]),1)=3;
+
+%calculate variance
+if sum(BpodSystem.Data.Settings.GUI.BlockTable.NoiseL ~=0) && sum(BpodSystem.Data.Settings.GUI.BlockTable.NoiseR ~=0) 
+    for j=1:length(blockIndex)
+        if j==1
+            blockVar(1:blockIndex(j),:)=repmat(var(BpodSystem.Data.Custom.RewardMagnitude(1:blockIndex(j),:)),blockIndex(j),1);
+        elseif j==length(blockIndex)
+            blockVar(blockIndex(j)+1:nTrials-1,:)=repmat(var(BpodSystem.Data.Custom.RewardMagnitude(blockIndex(j)+1:nTrials-1,:)), (nTrials-1)-blockIndex(j),1);
+        else
+            blockVar(blockIndex(j-1)+1:blockIndex(j)+1,:)=repmat(var(BpodSystem.Data.Custom.RewardMagnitude(blockIndex(j-1)+1:blockIndex(j),:)), blockIndex(j)+1-blockIndex(j-1),1);
+        end 
+    end
+
+    %var large = 1. var med=2, control=3
+    xx=blockVar([blockIndex, nTrials-1],:);
+
+    try
+        blockTable(:,2)=2; %default is medium trial - replace if highest var or control var
+        blockTable(sum(xx==max(max(xx)),2),2)=1;
+        blockTable(xx(:,1)==xx(:,2),2)=3;
+    catch
+        disp('Failed to caclulate variance')   
+    end
+    
+else
+    blockTable(:,2)=nan;
+    disp('no variance in reward blocks')
+end
+
+
+%% structure choice data into a matrix - s.t. each column is a block
+
+if length(unique(BpodSystem.Data.Custom.BlockNumberL))>1
+    ThereAreBlocks=true;
+    completedTrials=ChoiceLeft(~isnan(ChoiceLeft));
+    choiceLeftMat=NaN(250, length(blockIndex_omitNan)+1);
+    for xi=1:length(blockIndex_omitNan)+1
+        if xi==1 %first block
+            choiceLeftMat(1:length(completedTrials(1:blockIndex_omitNan(xi))),xi)=completedTrials(1:blockIndex_omitNan(xi));
+        elseif xi==length(blockIndex_omitNan)+1 %last block
+            choiceLeftMat(1:length(completedTrials(blockIndex_omitNan(end)+1:end)),xi)=completedTrials(blockIndex_omitNan(end)+1:end);
+        else
+            choiceLeftMat(1:length(completedTrials(blockIndex_omitNan(xi-1)+1:blockIndex_omitNan(xi))),xi)=completedTrials(blockIndex_omitNan(xi-1)+1:blockIndex_omitNan(xi));
+        end
+
+    end
+
+    blockTransMat=NaN(111, length(blockIndex_omitNan)+1);
+
+    for xi=1:length(blockIndex_omitNan)
+        try
+            blockTransMat(1:length(completedTrials(blockIndex_omitNan(xi)-50:blockIndex_omitNan(xi)+60)),xi+1)=completedTrials(blockIndex_omitNan(xi)-50:blockIndex_omitNan(xi)+60);
+        catch
+            if blockIndex_omitNan(xi)+60 > length(completedTrials)
+                disp(['not enough trials in block. out of bounds for completedTrials - failed at block transition ', num2str(xi+1) ])
+            elseif blockIndex_omitNan(xi)-50 < 0
+                disp('not enough trials in block. Negative trials.')
+            end
+        end
+    end
+
+
+   
+else
+    disp('There are no blocks')
+    ThereAreBlocks=false;
+end
+%%            
+
 for t = 1 : length(ST)
     R = BpodSystem.Data.Custom.RightClickTrain{t};
     L = BpodSystem.Data.Custom.LeftClickTrain{t};
@@ -133,12 +220,10 @@ end
 %plot running choice average
 subplot(3,3,[1 2])
 title('running choice avg')
-plot(movmean(S.ChoiceLeft(~isnan(S.ChoiceLeft)),20, 'omitnan'),'linewidth',2);
+plot(movmean(ChoiceLeft(~isnan(ChoiceLeft)),20, 'omitnan'),'linewidth',2);
 hold on; 
-try
-plot(S.plotBlockIdx);
-catch
-end
+plot(plotBlockIdx);
+
 
 %psychometric
 subplot(3,3,[4 8])
@@ -172,13 +257,15 @@ for i =1: length(unique(BpodSystem.Data.Custom.BlockNumberL))
 end
 
 
-if length(unique(BpodSystem.Data.Custom.BlockNumberL))>1
+if ThereAreBlocks
+    
     %psychometric avg across blocks
     subplot(3,3,[3])
     title('avg block psychometric')
     hold on
-
-    blockType=S.blockType(:,1);
+    
+    try
+    blockType=blockTable(:,1);
     %control block == 3
     [controlMeanX, controlMeanY]=avgPsyc(XBlock, YBlock, blockType, 3);
     %leftLarge == 1
@@ -188,36 +275,33 @@ if length(unique(BpodSystem.Data.Custom.BlockNumberL))>1
     plot(controlMeanX, controlMeanY, 'color', CondColors{3},'linewidth',2)
     plot(LMeanX, LMeanY,'color',CondColors{1}, 'linewidth',2)
     plot(RMeanX, RMeanY,'color',CondColors{2}, 'linewidth',2)
+    catch
+        disp('error in calculating average psychometric')
+    end
 
     %plot avg. choice transition to control block
     title('control block transition')
     subplot(3,3,[6])
-    [a,b] =size(S.blockTransMat);
+    [a,b] =size(blockTransMat);
     x = linspace(-50,60,a);
-    plot(x,mean(movmean(S.blockTransMat(:,blockType==3),25),2,'omitnan'), 'linewidth',2);
+    plot(x,mean(movmean(blockTransMat(:,blockType==3),25),2,'omitnan'), 'linewidth',2);
     xline(0)
 
     %plot avg. choice transition to high reward block
     hold on;
     subplot(3,3,[9])
     title('high to low transition')
-    [a,b] =size(S.blockTransMat);
+    [a,b] =size(blockTransMat);
     x = linspace(-50,60,a);
-    plot(x,mean(movmean(S.blockTransMat(:,blockType==2),25),2,'omitnan'),'linewidth',2);
+    plot(x,mean(movmean(blockTransMat(:,blockType==2),25),2,'omitnan'),'linewidth',2);
     xline(0)
 
     subplot(3,3,[9])
-    [a,b] =size(S.blockTransMat);
+    [a,b] =size(blockTransMat);
     x = linspace(-50,60,a);
-    plot(x,mean(movmean(S.blockTransMat(:,blockType==1),25),2,'omitnan'), 'linewidth',2);
+    plot(x,mean(movmean(blockTransMat(:,blockType==1),25),2,'omitnan'), 'linewidth',2);
     xline(0)
-else
-    disp('there are no blocks detected')
 end
-
-
-
-
 
 
 end
@@ -266,146 +350,6 @@ end
 
 %cleans and concat multiple SessionData files
 %input: SessionData.Custom...
-
-function S = concatSession(varargin)
-    fields = fieldnames(varargin{1});
-    
-    %before concat. cut data length to completedTrials only
-    for i = 1:length(varargin)
-        completedTrials=length(varargin{i}.ChoiceLeft);
-        varargin{i}.SessionNum=repmat(i,1,completedTrials);
-        for ii = 1:length(fields)
-            aField=fields{ii};
-            if length(varargin{i}.(aField))>completedTrials
-                try
-                varargin{i}.(aField)=varargin{i}.(aField)(1:completedTrials, :);
-                catch
-                varargin{i}.(aField)=varargin{i}.(aField)(1:completedTrials);
-                end
-            end
-        end
-     
-
-
-        %add blockchange idx as custom data field
-
-        varargin{i}.blockChange=abs(varargin{i}.BlockNumberL(1:end-1)-varargin{i}.BlockNumberL(2:end));
-        varargin{i}.transType=zeros(1,completedTrials); 
- 
-        blockIdx=find(varargin{i}.blockChange==1);
-        if ~isempty(blockIdx)
-            for iii=1:length(blockIdx)
-                thisIdx=blockIdx(iii);
-                varargin{i}.transType(thisIdx)=iii;
-
-            end
-
-            %added to ignore nan trials, different index
-            varargin{i}.plotChoiceLeft=varargin{i}.ChoiceLeft(~isnan(varargin{i}.ChoiceLeft));
-            a=varargin{i}.BlockNumberL(~isnan(varargin{i}.ChoiceLeft));
-            plotBlockIdx=a(1:end-1)-a(2:end);
-            varargin{i}.plotBlockIdx=abs(plotBlockIdx);
-            plotIdx=find(varargin{i}.plotBlockIdx==1);
-            for iii=1:length(plotIdx)
-                thisIdx=plotIdx(iii);
-                varargin{i}.plotTransType(thisIdx)=iii;
-
-            end
-
-
-            %add trialTypes for analysis
-            %rewardMag
-            varargin{i}.leftLarge=varargin{i}.RewardMagnitude(:,1)>varargin{i}.RewardMagnitude(:,2);
-            varargin{i}.rightLarge=varargin{i}.RewardMagnitude(:,1)<varargin{i}.RewardMagnitude(:,2);
-            varargin{i}.controlMag=varargin{i}.RewardMagnitude(:,1)==varargin{i}.RewardMagnitude(:,2);
-
-            %index for later variance trial types
-            blockIndex=find(varargin{i}.blockChange==1); 
-
-            for j=1:length(blockIndex)
-                if j==1
-                    varargin{i}.variance(1:blockIndex(j),:)=repmat(var(varargin{i}.RewardMagnitude(1:blockIndex(j),:)),blockIndex(j),1);
-                elseif j==length(blockIndex)
-                    varargin{i}.variance(blockIndex(j)+1:completedTrials,:)=repmat(var(varargin{i}.RewardMagnitude(blockIndex(j)+1:completedTrials,:)), completedTrials-blockIndex(j),1);
-                else
-                    varargin{i}.variance(blockIndex(j-1)+1:blockIndex(j)+1,:)=repmat(var(varargin{i}.RewardMagnitude(blockIndex(j-1)+1:blockIndex(j),:)), blockIndex(j)+1-blockIndex(j-1),1);
-                end 
-            end
-
-            %blockType %2 columns - 1 reward 2 variance
-            varargin{i}.blockType=zeros(length(unique(varargin{i}.BlockNumberL)),2);
-            %left large = 1. right large=2, control=3
-            varargin{i}.blockType(varargin{i}.leftLarge([blockIndex, completedTrials]),1)=1;
-            varargin{i}.blockType(varargin{i}.rightLarge([blockIndex, completedTrials]),1)=2;
-            varargin{i}.blockType(varargin{i}.controlMag([blockIndex, completedTrials]),1)=3;
-
-            %var large = 1. var med=2, control=3
-            xx=varargin{i}.variance([blockIndex, completedTrials],:);
-
-            if (max(max(xx))~=0)
-                varargin{i}.blockType(:,2)=2; %default is medium trial - replace if highest var or control var
-                varargin{i}.blockType(sum(xx==max(max(xx)),2),2)=1;
-                varargin{i}.blockType(xx(:,1)==xx(:,2),2)=3;
-            else
-                varargin{i}.blockType(:,2)=nan;
-                disp('no variance in reward blocks')
-            end
-
-
-
-
-
-
-            %makae choice data into matrix, sep by blocks
-            blockIndex=find(varargin{i}.plotBlockIdx==1);
-             varargin{i}.choiceLeftMat=zeros(250, length(blockIndex)+1);
-                for xi=1:length(blockIndex)+1
-                    if xi==1
-                        varargin{i}.choiceLeftMat(1:length(varargin{i}.plotChoiceLeft(1:blockIndex(xi))),xi)=varargin{i}.plotChoiceLeft(1:blockIndex(xi));
-                    elseif xi==length(blockIndex)+1
-                        varargin{i}.choiceLeftMat(1:length(varargin{i}.plotChoiceLeft(blockIndex(end)+1:end)),xi)=varargin{i}.plotChoiceLeft(blockIndex(end)+1:end);
-                    else
-                        varargin{i}.choiceLeftMat(1:length(varargin{i}.plotChoiceLeft(blockIndex(xi-1)+1:blockIndex(xi))),xi)=varargin{i}.plotChoiceLeft(blockIndex(xi-1)+1:blockIndex(xi));
-                    end
-
-                end
-
-               varargin{i}.blockTransMat=NaN(111, length(blockIndex));
-               try
-                for xi=1:length(blockIndex)
-                  varargin{i}.blockTransMat(1:length(varargin{i}.plotChoiceLeft(blockIndex(xi)-50:blockIndex(xi)+60)),xi+1)=varargin{i}.plotChoiceLeft(blockIndex(xi)-50:blockIndex(xi)+60);
-                end
-               catch
-                   if (blockIndex(xi)-50)<0
-                       disp('not enough trials in block - starting index is negative')
-                   elseif (blockIndex(xi)+60)>length(varargin{i}.plotChoiceLeft)
-                       disp('not enough trials in block - end index not reached')
-                       varargin{i}.blockTransMat=horzcat(varargin{i}.blockTransMat, NaN(111, 1));
-                   end
-               end
-        else
-            disp('there are no blocks detected')
-
-        end
-
-
-
-        % merge structs
-        superStruct=cat(2, varargin{:});
-        fields = fieldnames(superStruct);
-
-        for k = 1:numel(fields)
-          aField     = fields{k}; % EDIT: changed to {}
-          try
-          S.(aField) = cat(2, superStruct(:).(aField));
-          catch
-          S.(aField) = cat(1, superStruct(:).(aField));
-
-          end
-
-        end
-end
-end
 
 function [blockMeanX, blockMeanY]=avgPsyc(XBlock, YBlock, blockType, blockNum)
     XXBlock=cell2mat(XBlock(blockType==blockNum));
