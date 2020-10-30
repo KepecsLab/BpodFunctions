@@ -109,6 +109,8 @@ windowCTA = 150; %window for CTA (ms)
 nTrials=BpodSystem.Data.nTrials;
 DV = BpodSystem.Data.Custom.DV(1:nTrials-1);
 ChoiceLeft = BpodSystem.Data.Custom.ChoiceLeft(1:nTrials-1);
+%exclude first trials?
+ChoiceLeft(1:min([nTrials,max([10,TaskParameters.GUI.StartEasyTrials])]))=NaN;
 ST = BpodSystem.Data.Custom.ST(1:nTrials-1);
 CatchTrial = BpodSystem.Data.Custom.CatchTrial((1:nTrials-1));
 Feedback = BpodSystem.Data.Custom.Feedback(1:nTrials-1);
@@ -200,7 +202,7 @@ for i = 1:length(LaserCond)
         YFit = glmval(glmfit(AudDV,ChoiceLeft(CompletedTrialsCond)','binomial'),linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100),'logit');
         plot(XFit,YFit,'Color',CondColors{i});
         xlabel('DV');ylabel('p left')
-        text(0.95*min(get(gca,'XLim')),0.96*max(get(gca,'YLim')),[num2str(round(nanmean(Correct(CompletedTrialsCond))*100)),'%,n=',num2str(nTrialsCompleted)]);
+        text(0.95*min(get(gca,'XLim')),0.96*max(get(gca,'YLim')),[num2str(round(nanmean(Correct(CompletedTrialsCond))*100)),'%,n=',num2str(CompletedTrialsCond)]);
     end
 end
 
@@ -348,6 +350,7 @@ end
 
 %waiting time distributions
 ColorsCond = {[.5,.5,.5],[.9,.1,.1]};
+WTBins = linspace(min(WT(~Feedback)),max(WT(~Feedbacl)),11);
 if length(LaserCond)==1
     %no laser
     subplot(3,4,7)
@@ -355,8 +358,8 @@ if length(LaserCond)==1
     xlabel('waiting time (s)'); ylabel ('n trials');
     WTnoFeedbackL = WT(~Feedback & ChoiceLeft == 1);
     WTnoFeedbackR = WT(~Feedback & ChoiceLeft == 0);
-    histogram(WTnoFeedbackL,10,'EdgeColor','none','FaceColor',[.2,.2,1]);
-    histogram(WTnoFeedbackR,10,'EdgeColor','none','FaceColor',[.8,.6,.1]);
+    histogram(WTnoFeedbackL,WTBins,'EdgeColor','none','FaceColor',[.2,.2,1]);
+    histogram(WTnoFeedbackR,WTBins,'EdgeColor','none','FaceColor',[.8,.6,.1]);
 
     meanWTL = nanmean(WTnoFeedbackL);
     meanWTR = nanmean(WTnoFeedbackR);
@@ -384,11 +387,11 @@ else%laser
      meanWTL = nanmean(WTnoFeedbackL);
     meanWTR = nanmean(WTnoFeedbackR);
     subplot(3,4,7)
-    histogram(WTnoFeedbackL,10,'EdgeColor','none','FaceColor',ColorsCond{i});
+    histogram(WTnoFeedbackL,WTBins,'EdgeColor','none','FaceColor',ColorsCond{i},'Normalization','probablity');
     line([meanWTL,meanWTL],get(gca,'YLim'),'Color',ColorsCond{i});
     text(meanWTL-1,(1.05-0.1*(i-1))*(max(get(gca,'YLim'))-min(get(gca,'YLim'))),['m_l=',num2str(round(meanWTL*10)/10)],'Color',ColorsCond{i});
     subplot(3,4,8)
-    histogram(WTnoFeedbackR,10,'EdgeColor','none','FaceColor',ColorsCond{i});
+    histogram(WTnoFeedbackR,WTBins,'EdgeColor','none','FaceColor',ColorsCond{i},'Normalization','probablity');
     line([meanWTR,meanWTR],get(gca,'YLim'),'Color',ColorsCond{i});
     text(meanWTL-1,(1.05-0.1*(i-1))*(max(get(gca,'YLim'))-min(get(gca,'YLim'))),['m_r=',num2str(round(meanWTR*10)/10)],'Color',ColorsCond{i});
 
