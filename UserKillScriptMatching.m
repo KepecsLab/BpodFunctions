@@ -412,6 +412,18 @@ if ~all(isnan(DrinkingTime)) && numel(center) > 1
      xlabel('Drinking times (s)');ylabel('n');
 end
 
+subplot(4,3,12)
+hold on
+%actual ITI lenghts
+ITI = nan(nTrials-1,1);
+for t = 1 : nTrials -1
+    ITI(t) = BpodSystem.Data.TrialStartTimestamp(t+1) - BpodSystem.Data.TrialStartTimestamp(t) - BpodSystem.Data.RawEvents.Trial{t}.States.ITI(1,1) + BpodSystem.Data.RawEvents.Trial{t}.States.PreITI(1,2);
+end
+cc=linspace(min(ITI),max(ITI),20);
+histogram(ITI,cc,'FaceColor',[.6,.6,.6],'EdgeColor',[1,1,1])
+goal = TaskParameters.GUI.ITI + TaskParameters.GUI.PreITI;
+line([goal,goal],get(gca,'YLim'),'Color',[1,0,0])
+xlabel('Actual ITI (s)'); ylabel('n')
 
 end%succ
 
