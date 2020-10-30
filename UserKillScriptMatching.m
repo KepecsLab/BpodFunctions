@@ -131,10 +131,59 @@ if offline
 else
     [~,Animal]=fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
 end
+
+% correct feedback delay. weirdly (wrongly?!) done by TG in
+% updateCustomDataFields of Matching task. TO 10/2020
+nTrials=BpodSystem.Data.nTrials;
+TimeChoice = nan(1,nTrials);
+FeedbackDelay = nan(1,nTrials);
+PokeOut = nan(1,nTrials);
+PokeIn = nan(1,nTrials);
+for n =1:nTrials
+    statetimes = BpodSystem.Data.RawEvents.Trial{n}.States;
+    if  BpodSystem.Data.Custom.ChoiceLeft(n)==1
+        choicename = 'start_Lin';
+        rewardedname = 'water_L';
+        unrewardedname = 'unrewarded_Lin';
+        earlyname = 'EarlyLout';
+    elseif BpodSystem.Data.Custom.ChoiceLeft(n) == 0
+        choicename = 'start_Rin';
+        rewardedname = 'water_R';
+        unrewardedname = 'unrewarded_Rin';
+        earlyname = 'EarlyRout';
+    else
+        choicename = 'start_Lin'; %will be NaN
+    end
     
+    if BpodSystem.Data.Custom.Rewarded(n)==1
+        outtime = statetimes.(rewardedname)(1,1);
+    elseif BpodSystem.Data.Custom.Rewarded(n)==0 && ~isnan( SessionData.Custom.ChoiceLeft(n))
+        %for unrewarded trials, there are multiple possibilities... left as
+        %an 'early trial' or trial as an 'unrewarded' trial
+        if SessionData.Custom.EarlySout(n) == 1
+            outtime = statetimes.(earlyname)(1,1) - BpodSystem.Data.Settings.GUI.Grace;
+        else
+            outtime = statetimes.(unrewardedname)(1,1) - BpodSystem.Data.Settings.GUI.Grace;
+        end
+    elseif isnan( BpodSystem.Data.Custom.ChoiceLeft(n)) %no choice
+        outtime = NaN;
+    end
+    
+        %trial
+    
+    TimeChoice(n) = statetimes.(choicename)(1,1);
+    FeedbackDelay(n) = outtime - TimeChoice(n);
+    
+    PokeIn(n) = statetimes.Cin(1);
+    PokeOut(n)= statetimes.Cin(2);
+    
+end
+
+%correct feedback delay field
+BpodSystem.Data.Custom.FeedbackDelayCorrected = FeedbackDelay;
 
 %%
-FigHandle = figure('Position',[  385         170        1056         762],'NumberTitle','off','Name',Animal,'Color',[1,1,1]);
+FigHandle = figure('Position',[ 385    56   869   904],'NumberTitle','off','Name',Animal,'Color',[1,1,1]);
 nTrials=BpodSystem.Data.nTrials;
 ChoiceLeft = BpodSystem.Data.Custom.ChoiceLeft;
 LeftHi=double(BpodSystem.Data.Custom.LeftHi);
@@ -142,7 +191,7 @@ LeftHi(LeftHi==1)=TaskParameters.GUI.pHi/100;
 LeftHi(LeftHi==0)=TaskParameters.GUI.pLo/100;
 
 %plot running choice average
-subplot(3,3,[1 2 3])
+subplot(4,3,[1 2 3])
 
 if ~isempty(ChoiceLeft)
     Xdata = 1:nTrials-1;
@@ -172,7 +221,7 @@ end
 if succ
     
 %GLM Fit
-subplot(3,3,4)
+subplot(4,3,4)
 hold on
 
 ChoiceKernelRwd_YData = Mdl.Coefficients.Estimate(7:11);
@@ -190,7 +239,7 @@ l=legend('rewardKernel','choiceKernel','intercept');
 l.Box='off';
 
 %DV plot - psychometric
-subplot(3,3,5)
+subplot(4,3,5)
 hold on
 ndxValid =~isnan(BpodSystem.Data.Custom.ChoiceLeft); ndxValid = ndxValid(:);
 ChoiceLeft = BpodSystem.Data.Custom.ChoiceLeft(ndxValid);
@@ -210,15 +259,28 @@ mdl = fitglm(DV,ChoiceLeft(:),'Distribution','binomial');
 xx=linspace(dvbin(1),dvbin(end),100);
 plot(xx,predict(mdl,xx'),'-k')
 
-%'calibration' plot
-subplot(3,3,7)
+%waiting time distribution plot
+subplot(4,3,6)
 hold on
+
 ndxBaited = (BpodSystem.Data.Custom.Baited.Left & BpodSystem.Data.Custom.ChoiceLeft==1) | (BpodSystem.Data.Custom.Baited.Right & BpodSystem.Data.Custom.ChoiceLeft==0);
 ndxBaited = ndxBaited(:);
 ndxValid = BpodSystem.Data.Custom.EarlyCout==0 & ~isnan(BpodSystem.Data.Custom.ChoiceLeft); ndxValid = ndxValid(:);
+
+ti = BpodSystem.Data.Custom.FeedbackDelayCorrected(ndxValid & ~ndxBaited);
+reward_delay = BpodSystem.Data.Custom.FeedbackDelayCorrected(ndxValid & BpodSystem.Data.Custom.Rewarded'==1);
+cc = linspace(0,max(ti),16);
+histogram(ti,cc,'Normalization','probability','FaceColor',[.6,.6,.6],'EdgeColor',[1,1,1])
+hi = histcounts(reward_delay,cc,'Normalization','probability');
+plot((cc(1:end-1) + cc(2:end))/2,hi,'Color',[.1,.1,1]);
+xlabel('Time investment (s)')
+ylabel('p')
+
+%'calibration' plot
+subplot(4,3,7)
+hold on
 ndxExploit = BpodSystem.Data.Custom.ChoiceLeft(:) == (logodds>0);
 
-ti = BpodSystem.Data.Custom.FeedbackDelay(ndxValid & ~ndxBaited);
 left = BpodSystem.Data.Custom.ChoiceLeft(ndxValid & ~ndxBaited)==1;
 corr = ndxExploit(ndxValid & ~ndxBaited); %'correct'
 edges = linspace(min(ti),max(ti),8);
@@ -229,7 +291,7 @@ xlabel('Time investment (s)')
 ylabel('Percent exploit')
 
 %plot vevaiometric    
-subplot(3,3,8)
+subplot(4,3,8)
 hold on
 
 ndxBaited = (BpodSystem.Data.Custom.Baited.Left & BpodSystem.Data.Custom.ChoiceLeft==1) | (BpodSystem.Data.Custom.Baited.Right & BpodSystem.Data.Custom.ChoiceLeft==0);
@@ -237,9 +299,9 @@ ndxBaited = ndxBaited(:);
 ndxValid = BpodSystem.Data.Custom.EarlyCout==0 & ~isnan(BpodSystem.Data.Custom.ChoiceLeft); ndxValid = ndxValid(:);
 ndxExploit = BpodSystem.Data.Custom.ChoiceLeft(:) == (logodds>0);
 ExploreScatter_XData = logodds(ndxValid & ~ndxBaited & ~ndxExploit);
-ExploreScatter_YData = BpodSystem.Data.Custom.FeedbackDelay(ndxValid & ~ndxBaited & ~ndxExploit)';
+ExploreScatter_YData = BpodSystem.Data.Custom.FeedbackDelayCorrected(ndxValid & ~ndxBaited & ~ndxExploit)';
 ExploitScatter_XData = logodds(ndxValid & ~ndxBaited & ndxExploit);
-ExploitScatter_YData = BpodSystem.Data.Custom.FeedbackDelay(ndxValid & ~ndxBaited & ndxExploit)';
+ExploitScatter_YData = BpodSystem.Data.Custom.FeedbackDelayCorrected(ndxValid & ~ndxBaited & ndxExploit)';
 [ExploreLine_XData, ExploreLine_YData] = binvevaio(ExploreScatter_XData,ExploreScatter_YData,10);
 [ExploitLine_XData, ExploitLine_YData] = binvevaio(ExploitScatter_XData,ExploitScatter_YData,10);
 
@@ -262,12 +324,12 @@ ylabel('Time investment (s)')
 
 %'condition psychometry'
 %DV plot - psychometric
-subplot(3,3,9)
+subplot(4,3,9)
 Colors={[0,0,.9];[.5,.5,1]}; %high/low
 hold on
 ChoiceLeft = BpodSystem.Data.Custom.ChoiceLeft(ndxValid & ~ndxBaited);ChoiceLeft=ChoiceLeft(:);
 DV = logodds(ndxValid & ~ndxBaited);DV=DV(:);
-TI = BpodSystem.Data.Custom.FeedbackDelay(ndxValid & ~ndxBaited);
+TI = BpodSystem.Data.Custom.FeedbackDelayCorrected(ndxValid & ~ndxBaited);
 TImed=nanmedian(TI);
 high = TI>TImed;
 low = TI<=TImed;
@@ -299,6 +361,57 @@ ylabel('P(Left)')
 l=legend([h1,h2],{'High TI','Low TI'});
 l.Box='off';
 l.Location='northwest';
+
+%% session diagnostic plots
+subplot(4,3,10)
+hold on
+%caclulate  grace periods
+GracePeriods=[];
+GracePeriodsL=[];
+GracePeriodsR=[];
+for t = 1 : nTrials
+    GracePeriods = [GracePeriods;BpodSystem.Data.RawEvents.Trial{t}.States.Rin_grace(:,2)-BpodSystem.Data.RawEvents.Trial{t}.States.Rin_grace(:,1);BpodSystem.Data.RawEvents.Trial{t}.States.Lin_grace(:,2)-BpodSystem.Data.RawEvents.Trial{t}.States.Lin_grace(:,1)];
+    if BpodSystem.Data.Custom.ChoiceLeft(t) == 1
+        GracePeriodsL = [GracePeriodsL;BpodSystem.Data.RawEvents.Trial{t}.States.Lin_grace(:,2)-BpodSystem.Data.RawEvents.Trial{t}.States.Lin_grace(:,1)];
+    elseif BpodSystem.Data.Custom.ChoiceLeft(t)==0
+        GracePeriodsR = [GracePeriodsR;BpodSystem.Data.RawEvents.Trial{t}.States.Rin_grace(:,2)-BpodSystem.Data.RawEvents.Trial{t}.States.Rin_grace(:,1)];
+    end
+end
+%remove "full" grace periods
+GracePeriodsMax=TaskParameters.GUI.Grace;
+GracePeriods(GracePeriods>=GracePeriodsMax-0.001 & GracePeriods<=GracePeriodsMax+0.001 )=[];
+GracePeriodsR(GracePeriodsR>=GracePeriodsMax-0.001 & GracePeriodsR<=GracePeriodsMax+0.001 )=[];
+GracePeriodsL(GracePeriodsL>=GracePeriodsMax-0.001 & GracePeriodsL<=GracePeriodsMax+0.001 )=[];
+center = 0:0.025:max(GracePeriods);
+if ~all(isnan(GracePeriodsL)) && numel(center) > 1 && ~all(isnan(GracePeriodsR))
+    g = hist(GracePeriods,center);g=g/sum(g);
+    gl = hist(GracePeriodsL,center);gl=gl/sum(gl);
+    gr = hist(GracePeriodsR,center);gr=gr/sum(gr);
+    hold on
+    plot(center,g,'k','LineWidth',2)
+    plot(center,gl,'m','LineWidth',1)
+    plot(center,gr,'c','LineWidth',1)
+    xlabel('Grace period (s)');ylabel('p');
+    text(min(get(gca,'XLim'))+0.05,max(get(gca,'YLim'))-0.05,['n=',num2str(sum(~isnan(GracePeriods))),'(',num2str(sum(~isnan(GracePeriodsL))),'/',num2str(sum(~isnan(GracePeriodsR))),')']);
+end
+
+subplot(4,3,11)
+hold on
+%drinking time dist
+DrinkingTime=[];
+for t = 1 : nTrials
+    if BpodSystem.Data.Custom.ChoiceLeft(t)==1
+        DrinkingTime(end+1)=BpodSystem.Data.RawEvents.Trial{t}.States.DrinkingL(end,end) - BpodSystem.Data.RawEvents.Trial{t}.States.DrinkingL(1,1);
+    elseif BpodSystem.Data.Custom.ChoiceLeft(t)==0
+        DrinkingTime(end+1)=BpodSystem.Data.RawEvents.Trial{t}.States.DrinkingR(end,end) - BpodSystem.Data.RawEvents.Trial{t}.States.DrinkingR(1,1);
+    end
+end
+center = 0:0.2:max(DrinkingTime);
+if ~all(isnan(DrinkingTime)) && numel(center) > 1
+    histogram(DrinkingTime,center);
+     xlabel('Drinking times (s)');ylabel('n');
+end
+
 
 end%succ
 
