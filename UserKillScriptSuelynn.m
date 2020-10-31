@@ -193,7 +193,8 @@ if length(unique(BpodSystem.Data.Custom.BlockNumberL))>1
             blockTransMat(1:length(completedTrials(blockIndex_omitNan(xi)-50:blockIndex_omitNan(xi)+60)),xi+1)=completedTrials(blockIndex_omitNan(xi)-50:blockIndex_omitNan(xi)+60);
         catch
             if blockIndex_omitNan(xi)+60 > length(completedTrials)
-                disp(['not enough trials in block. out of bounds for completedTrials - failed at block transition ', num2str(xi+1) ])
+                disp(['not enough trials in block. only ' num2str(length(completedTrials)-blockIndex_omitNan(xi)) 'trials in block' num2str(xi+1) ])
+                %disp(['not enough trials in block. only ' nu2str(length(completedTrials)-blockIndex_omitNan(xi) 'trials in block' num2str(xi+1) ])
             elseif blockIndex_omitNan(xi)-50 < 0
                 disp('not enough trials in block. Negative trials.')
             end
@@ -244,7 +245,7 @@ for i =1: length(unique(BpodSystem.Data.Custom.BlockNumberL))
             XFit = linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100);
             YFit = glmval(glmfit(AudDV,ChoiceLeft(CompletedTrials)','binomial'),linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100),'logit');
             if length(unique(BpodSystem.Data.Custom.BlockNumberL))>1
-                plot(XFit,YFit, 'color',CondColors{S.blockType(i)}, 'linewidth',2);
+                plot(XFit,YFit, 'color',CondColors{blockTable(i,1)}, 'linewidth',2);
             else
                plot(XFit,YFit, 'linewidth',2); 
             end
@@ -352,12 +353,12 @@ end
 %input: SessionData.Custom...
 
 function [blockMeanX, blockMeanY]=avgPsyc(XBlock, YBlock, blockType, blockNum)
-    XXBlock=cell2mat(XBlock(blockType==blockNum));
-    XXBlock=reshape(cell2mat(XXBlock(blockType==blockNum)), 100,[]);
+    %XXBlock=cell2mat(XBlock(blockType==blockNum));
+    XXBlock=reshape(cell2mat(XBlock(blockType==blockNum)), 100,[]);
     blockMeanX=mean(XXBlock,2);
     
-    YYBlock=cell2mat(YBlock(blockType==blockNum));
-    YYBlock=reshape(cell2mat(YYBlock(blockType==blockNum)), 100,[]);
+    %YYBlock=cell2mat(YBlock(blockType==blockNum));
+    YYBlock=reshape(cell2mat(YBlock(blockType==blockNum)), 100,[]);
     blockMeanY=mean(YYBlock,2);
 end
 
