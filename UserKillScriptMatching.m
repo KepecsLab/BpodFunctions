@@ -123,10 +123,10 @@ function FigHandle = Analysis()
 global TaskParameters
 global BpodSystem
 
-offline=true;
+offline=false;
 if offline
     BpodSystem.Data=SessionData;
-    TaskParameters = SessionData.Settings;
+    TaskParameters = SessionData.TrialSettings(1);
     Animal ='Unknown';
 else
     [~,Animal]=fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
