@@ -93,6 +93,15 @@ function FigHandle = Analysis()
 global TaskParameters
 global BpodSystem
 
+offline=false;
+if offline
+    BpodSystem.Data=SessionData;
+    TaskParameters = SessionData.Settings;
+    Animal ='Unknown';
+else
+    [~,Animal]=fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
+end
+
 GracePeriodsMax = TaskParameters.GUI.FeedbackDelayGrace; %assumes same for each trial
 StimTime = TaskParameters.GUI.AuditoryStimulusTime; %assumes same for each trial
 MinWT = TaskParameters.GUI.VevaiometricMinWT; %assumes same for each trial
@@ -100,8 +109,6 @@ MaxWT = 10;
 AudBin = 8; %Bins for psychometric
 AudBinWT = 6;%Bins for vevaiometric
 windowCTA = 150; %window for CTA (ms)
-
-[~,Animal]=fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -184,7 +191,7 @@ end
 CondColors={[0,0,0],[.9,.1,.1]};
 
 %%
-FigHandle = figure('Position',[ 360         187        1056         598],'NumberTitle','off','Name',Animal);
+FigHandle = figure('Position',[ 360         187        1056         598],'NumberTitle','off','Name',Animal,'Color',[1,1,1]);
 % ExperiencedDV=DV;
 
 %Psychometric
@@ -202,7 +209,7 @@ for i = 1:length(LaserCond)
         YFit = glmval(glmfit(AudDV,ChoiceLeft(CompletedTrialsCond)','binomial'),linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100),'logit');
         plot(XFit,YFit,'Color',CondColors{i});
         xlabel('DV');ylabel('p left')
-        text(0.95*min(get(gca,'XLim')),0.96*max(get(gca,'YLim')),[num2str(round(nanmean(Correct(CompletedTrialsCond))*100)),'%,n=',num2str(CompletedTrialsCond)]);
+        text(0.95*min(get(gca,'XLim')),0.96*max(get(gca,'YLim'))-(i-1)*.1,[num2str(round(nanmean(Correct(CompletedTrialsCond))*100)),'%,n=',num2str(sum(CompletedTrialsCond))]);
     end
 end
 
@@ -350,7 +357,7 @@ end
 
 %waiting time distributions
 ColorsCond = {[.5,.5,.5],[.9,.1,.1]};
-WTBins = linspace(min(WT(~Feedback)),max(WT(~Feedbacl)),11);
+WTBins = linspace(min(WT(~Feedback)),max(WT(~Feedback)),11);
 if length(LaserCond)==1
     %no laser
     subplot(3,4,7)
@@ -375,10 +382,10 @@ if length(LaserCond)==1
 else%laser
     subplot(3,4,7)
     hold on
-    xlabel('waiting time (s)'); ylabel ('n trials');
+    xlabel('waiting time (s)'); ylabel ('p');
     subplot(3,4,8)
     hold on
-    xlabel('waiting time (s)'); ylabel ('n trials');
+    xlabel('waiting time (s)'); ylabel ('p');
     PshortWTL=cell(1,2);PshortWTR=cell(1,2);
     for i =1:length(LaserCond)
     
@@ -387,11 +394,11 @@ else%laser
      meanWTL = nanmean(WTnoFeedbackL);
     meanWTR = nanmean(WTnoFeedbackR);
     subplot(3,4,7)
-    histogram(WTnoFeedbackL,WTBins,'EdgeColor','none','FaceColor',ColorsCond{i},'Normalization','probablity');
+    histogram(WTnoFeedbackL,WTBins,'EdgeColor','none','FaceColor',ColorsCond{i},'Normalization','probability');
     line([meanWTL,meanWTL],get(gca,'YLim'),'Color',ColorsCond{i});
     text(meanWTL-1,(1.05-0.1*(i-1))*(max(get(gca,'YLim'))-min(get(gca,'YLim'))),['m_l=',num2str(round(meanWTL*10)/10)],'Color',ColorsCond{i});
     subplot(3,4,8)
-    histogram(WTnoFeedbackR,WTBins,'EdgeColor','none','FaceColor',ColorsCond{i},'Normalization','probablity');
+    histogram(WTnoFeedbackR,WTBins,'EdgeColor','none','FaceColor',ColorsCond{i},'Normalization','probability');
     line([meanWTR,meanWTR],get(gca,'YLim'),'Color',ColorsCond{i});
     text(meanWTL-1,(1.05-0.1*(i-1))*(max(get(gca,'YLim'))-min(get(gca,'YLim'))),['m_r=',num2str(round(meanWTR*10)/10)],'Color',ColorsCond{i});
 

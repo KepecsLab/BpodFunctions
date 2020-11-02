@@ -123,7 +123,7 @@ function FigHandle = Analysis()
 global TaskParameters
 global BpodSystem
 
-offline=false;
+offline=true;
 if offline
     BpodSystem.Data=SessionData;
     TaskParameters = SessionData.Settings;
@@ -161,9 +161,9 @@ for n =1:nTrials
         %for unrewarded trials, there are multiple possibilities... left as
         %an 'early trial' or trial as an 'unrewarded' trial
         if SessionData.Custom.EarlySout(n) == 1
-            outtime = statetimes.(earlyname)(1,1) - BpodSystem.Data.Settings.GUI.Grace;
+            outtime = statetimes.(earlyname)(1,1) - TaskParameters.GUI.Grace;
         else
-            outtime = statetimes.(unrewardedname)(1,1) - BpodSystem.Data.Settings.GUI.Grace;
+            outtime = statetimes.(unrewardedname)(1,1) - TaskParameters.GUI.Grace;
         end
     elseif isnan( BpodSystem.Data.Custom.ChoiceLeft(n)) %no choice
         outtime = NaN;
