@@ -157,10 +157,10 @@ for n =1:nTrials
     
     if BpodSystem.Data.Custom.Rewarded(n)==1
         outtime = statetimes.(rewardedname)(1,1);
-    elseif BpodSystem.Data.Custom.Rewarded(n)==0 && ~isnan( SessionData.Custom.ChoiceLeft(n))
+    elseif BpodSystem.Data.Custom.Rewarded(n)==0 && ~isnan( BpodSystem.Data.Custom.ChoiceLeft(n))
         %for unrewarded trials, there are multiple possibilities... left as
         %an 'early trial' or trial as an 'unrewarded' trial
-        if SessionData.Custom.EarlySout(n) == 1
+        if BpodSystem.Data.Custom.EarlySout(n) == 1
             outtime = statetimes.(earlyname)(1,1) - TaskParameters.GUI.Grace;
         else
             outtime = statetimes.(unrewardedname)(1,1) - TaskParameters.GUI.Grace;
@@ -260,6 +260,8 @@ xx=linspace(dvbin(1),dvbin(end),100);
 plot(xx,predict(mdl,xx'),'-k')
 
 %waiting time distribution plot
+leave_session = TaskParameters.GUI.CatchUnrwd ==1;
+if leave_session
 subplot(4,3,6)
 hold on
 
@@ -361,6 +363,8 @@ ylabel('P(Left)')
 l=legend([h1,h2],{'High TI','Low TI'});
 l.Box='off';
 l.Location='northwest';
+end%if leave_session
+end%succ
 
 %% session diagnostic plots
 subplot(4,3,10)
@@ -408,7 +412,7 @@ for t = 1 : nTrials
 end
 center = 0:0.2:max(DrinkingTime);
 if ~all(isnan(DrinkingTime)) && numel(center) > 1
-    histogram(DrinkingTime,center);
+    histogram(DrinkingTime,center,'FaceColor',[.5,.5,.5],'EdgeColor',[1,1,1]);
      xlabel('Drinking times (s)');ylabel('n');
 end
 
@@ -420,12 +424,12 @@ for t = 1 : nTrials -1
     ITI(t) = BpodSystem.Data.TrialStartTimestamp(t+1) - BpodSystem.Data.TrialStartTimestamp(t) - BpodSystem.Data.RawEvents.Trial{t}.States.ITI(1,1) + BpodSystem.Data.RawEvents.Trial{t}.States.PreITI(1,2);
 end
 cc=linspace(min(ITI),max(ITI),20);
-histogram(ITI,cc,'FaceColor',[.6,.6,.6],'EdgeColor',[1,1,1])
+histogram(ITI,cc,'FaceColor',[.5,.5,.5],'EdgeColor',[1,1,1])
 goal = TaskParameters.GUI.ITI + TaskParameters.GUI.PreITI;
 line([goal,goal],get(gca,'YLim'),'Color',[1,0,0])
 xlabel('Actual ITI (s)'); ylabel('n')
 
-end%succ
+
 
 end
 
