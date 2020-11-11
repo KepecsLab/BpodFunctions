@@ -281,27 +281,75 @@ if ThereAreBlocks
     end
 
     %plot avg. choice transition to control block
-    title('control block transition')
-    subplot(3,3,[6])
-    [a,b] =size(blockTransMat);
-    x = linspace(-50,60,a);
-    plot(x,mean(movmean(blockTransMat(:,blockType==3),25),2,'omitnan'), 'linewidth',2);
-    xline(0)
+%     title('control block transition')
+%     subplot(3,3,[6])
+%     [a,b] =size(blockTransMat);
+%     x = linspace(-50,60,a);
+%     plot(x,mean(movmean(blockTransMat(:,blockType==3),25),2,'omitnan'), 'linewidth',2);
+%     xline(0)
 
     %plot avg. choice transition to high reward block
-    hold on;
-    subplot(3,3,[9])
-    title('high to low transition')
-    [a,b] =size(blockTransMat);
-    x = linspace(-50,60,a);
-    plot(x,mean(movmean(blockTransMat(:,blockType==2),25),2,'omitnan'),'linewidth',2);
-    xline(0)
-
-    subplot(3,3,[9])
-    [a,b] =size(blockTransMat);
-    x = linspace(-50,60,a);
-    plot(x,mean(movmean(blockTransMat(:,blockType==1),25),2,'omitnan'), 'linewidth',2);
-    xline(0)
+    if find(blockType==2)-1 ~=0
+        leftHi2rightHi= blockType==2 & blockType(find(blockType==2)-1)==1; %if the prev. block was left high
+        subplot(3,3,[9])
+        title('high to low transition')
+        [a,b] =size(blockTransMat);
+        x = linspace(-50,60,a);
+        plot(x,mean(movmean(blockTransMat(:,leftHi2rightHi),25),2,'omitnan'),'linewidth',2, 'DisplayName','L2R');
+        xline(0)
+        
+        control2rightHi=blockType==2 & blockType(find(blockType==2)-1)==3; %control to left Hi
+        subplot(3,3,[6])
+        [a,b] =size(blockTransMat);
+        x = linspace(-50,60,a);
+        plot(x,mean(movmean(blockTransMat(:,control2rightHi),25),2,'omitnan'), 'linewidth',2, 'DisplayName','C2R');
+        xline(0)
+        hold on;
+    end
+    
+    if find(blockType==1)-1 ~=0
+        rightHi2leftHi= blockType==1 & blockType(find(blockType==1)-1)==2; %if the prev. block was tight high
+        hold on;
+        subplot(3,3,[9])
+        [a,b] =size(blockTransMat);
+        x = linspace(-50,60,a);
+        plot(x,mean(movmean(blockTransMat(:,rightHi2leftHi),25),2,'omitnan'), 'linewidth',2, 'DisplayName','R2L');
+        xline(0)
+        
+        control2leftHi=blockType==1 & blockType(find(blockType==1)-1)==3; %control to left Hi
+        subplot(3,3,[6])
+        title('control block transition')
+        [a,b] =size(blockTransMat);
+        x = linspace(-50,60,a);
+        plot(x,mean(movmean(blockTransMat(:,control2leftHi),25),2,'omitnan'), 'linewidth',2, 'DisplayName','C2L');
+        xline(0)
+        hold on;
+    end
+        
+        
+       if find(blockType==3)-1 ~= 0
+           
+        leftHi2control=blockType==3 & blockType(find(blockType==3)-1)==1; %left hi to control
+        subplot(3,3,[6])
+        [a,b] =size(blockTransMat);
+        x = linspace(-50,60,a);
+        plot(x,mean(movmean(blockTransMat(:,leftHi2control),25),2,'omitnan'), 'linewidth',2,'DisplayName','L2C');
+        xline(0)
+        hold on;
+      
+        rightHi2control=blockType==3 & blockType(find(blockType==3)-1)==2; %right hi to control
+        subplot(3,3,[6])
+        [a,b] =size(blockTransMat);
+        x = linspace(-50,60,a);
+        plot(x,mean(movmean(blockTransMat(:,rightHi2control),25),2,'omitnan'), 'linewidth',2,'DisplayName','R2C' );
+        xline(0)
+       end
+      
+       legend(subplot(3,3,[9]));
+       legend(subplot(3,3,[6]));
+        
+        
+ 
 end
 
 
