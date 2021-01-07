@@ -123,6 +123,9 @@ CatchTrial = BpodSystem.Data.Custom.CatchTrial((1:nTrials-1));
 Feedback = BpodSystem.Data.Custom.Feedback(1:nTrials-1);
 Correct = BpodSystem.Data.Custom.ChoiceCorrect(1:nTrials-1);
 WT =  BpodSystem.Data.Custom.FeedbackTime(1:nTrials-1);
+Blocki = BpodSystem.Data.Custom.BlockTrial(1:nTrials-1);
+Blockn = BpodSystem.Data.Custom.BlockNumber(1:nTrials-1);
+nblocks = length(unique(Blockn));
 if isfield(BpodSystem.Data.Custom,'LaserTrial')
     LaserTrial =  BpodSystem.Data.Custom.LaserTrial(1:nTrials-1);
 else
@@ -136,7 +139,7 @@ end
 %     error --> always (if error catch)
 %     catch --> always (if choice happened)
 
-CompletedTrials = (Feedback&Correct==1) | (Correct==0) | CatchTrial&~isnan(ChoiceLeft);
+CompletedTrials = (Feedback&Correct==1) | (Correct==0) | CatchTrial&~isnan(ChoiceLeft) & Blocki>0;
 nTrialsCompleted = sum(CompletedTrials);
 
 %calculate exerienced dv
@@ -151,8 +154,8 @@ if TaskParameters.GUI.AuditoryStimulusType == 1 %click
         L = BpodSystem.Data.Custom.LeftClickTrain{t};
         Ri = sum(R<=ST(t));if Ri==0, Ri=1; end
         Li = sum(L<=ST(t));if Li==0, Li=1; end
-        ExperiencedDV(t) = log10(Li/Ri);
-        %         ExperiencedDV(t) = (Li-Ri)./(Li+Ri);
+%         ExperiencedDV(t) = log10(Li/Ri);
+                ExperiencedDV(t) = (Li-Ri)./(Li+Ri);
     end
 elseif TaskParameters.GUI.AuditoryStimulusType == 2 %freq
     LevelsLow = 1:ceil(TaskParameters.GUI.Aud_nFreq/3);
@@ -197,6 +200,8 @@ FigHandle = figure('Position',[ 360         187        1056         598],'Number
 %Psychometric
 subplot(3,4,1)
 hold on
+
+    %plot psychometric by laser condition
 for i = 1:length(LaserCond)
     CompletedTrialsCond = CompletedTrials & LaserTrial == LaserCond(i);
     AudDV = ExperiencedDV(CompletedTrialsCond);
@@ -213,9 +218,12 @@ for i = 1:length(LaserCond)
     end
 end
 
-%conditioned psychometric
+
+
+%conditioned psychometric ON WT OR BLOCKS
 subplot(3,4,2)
 hold on
+if nblocks==1 % plot per WT
 %low
 WTmed=median(WT(CompletedTrials&CatchTrial&WT>MinWT&WT<MaxWT));
 AudDV = ExperiencedDV(CompletedTrials&CatchTrial&WT<=WTmed&WT>MinWT);
@@ -241,7 +249,36 @@ if ~isempty(AudDV)
     xlabel('DV');ylabel('p left')
     legend([h2,h1],{['WT>',num2str(round(WTmed*100)/100)],['WT<',num2str(round(WTmed*100)/100)]},'Units','normalized','Position',[0.333,0.85,0.1,0.1])
 end
-
+else
+ %there are blocks: plot psychometric by block
+    BlockColors = {[0,0,0],[ 0.99, 0.79,  0.25],[ 0.99, 0.43,  0.25],[.5,.5,.5]};
+    BlockName = {'Con1','Left','Right','Con2'};
+    if BpodSystem.Data.TrialSettings(nTrials).GUI.BlockTable.RewL(2)<BpodSystem.Data.TrialSettings(nTrials).GUI.BlockTable.RewR(2)
+        BlockColors = BlockColors([1,3,2,4]);
+        BlockName = BlockName([1,3,2,4]);
+    end
+    for i = 1:nblocks
+        CompletedTrialsCond = CompletedTrials & Blockn == i;
+        AudDV = ExperiencedDV(CompletedTrialsCond);
+        if ~isempty(AudDV)
+            BinIdx = discretize(AudDV,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBin+1));
+            PsycY = grpstats(ChoiceLeft(CompletedTrialsCond),BinIdx,'mean');
+            PsycX = grpstats(ExperiencedDV(CompletedTrialsCond),BinIdx,'mean');
+            plot(PsycX,PsycY,'ok','MarkerFaceColor',BlockColors{i},'MarkerEdgeColor','w','MarkerSize',6)
+            XFit = linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100);
+            YFit = glmval(glmfit(AudDV,ChoiceLeft(CompletedTrialsCond)','binomial'),linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100),'logit');
+            plot(XFit,YFit,'Color',BlockColors{i});
+            if i==1
+                xlabel('DV');ylabel('p left')
+%                 text(0.95*min(get(gca,'XLim')),0.96*max(get(gca,'YLim'))-(i-1)*.1,[num2str(round(nanmean(Correct(CompletedTrials))*100)),'%,n=',num2str(sum(CompletedTrials))]);
+            end
+            if i>=1 && i<=4
+                text(0.95*min(get(gca,'XLim')),0.96*max(get(gca,'YLim'))-(i-1)*.1,[BlockName{i}, ', n=',num2str(sum(CompletedTrialsCond))],'Color',BlockColors{i});
+            end
+                
+        end
+    end
+end
 %calibration
 subplot(3,4,3)
 hold on
