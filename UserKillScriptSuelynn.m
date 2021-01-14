@@ -89,19 +89,20 @@ end
 
 end
 
-function FigHandle = Analysis()
+function FigHandle = Analysis(SessionData)
 
 global TaskParameters
 global BpodSystem
 
-offline=false;
-if offline
-    BpodSystem.Data=SessionData;
-    TaskParameters = SessionData.Settings;
-    Animal ='Unknown';
-else
-    [~,Animal]=fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
-end
+offline=False;
+
+    if offline
+        BpodSystem.Data=SessionData;
+        TaskParameters = SessionData.Settings;
+        Animal ='Unknown';
+    else
+        [~,Animal]=fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
+    end
     
 
 %%
@@ -125,46 +126,32 @@ plotBlockIdx=a(1:end-1)-a(2:end);
 plotBlockIdx=abs(plotBlockIdx);
 blockIndex_omitNan=find(plotBlockIdx==1);
 
+% trial types reward bias - control == 1, left high== 2, right high ==3 -->
+% blockTable
+blockTable=[];
+waterTable=horzcat(BpodSystem.Data.TrialSettings(end).GUI.BlockTable.RewL,BpodSystem.Data.TrialSettings(end).GUI.BlockTable.RewR);
+blockTable(waterTable(:,1)==waterTable(:,2))=1;
+blockTable(waterTable(:,1)>waterTable(:,2))=2;
+blockTable(waterTable(:,1)<waterTable(:,2))=3;
+blockTable=blockTable';
 
-leftLarge=BpodSystem.Data.Custom.RewardMagnitude(:,1)>BpodSystem.Data.Custom.RewardMagnitude(:,2);
-rightLarge=BpodSystem.Data.Custom.RewardMagnitude(:,1)<BpodSystem.Data.Custom.RewardMagnitude(:,2);
-controlMag=BpodSystem.Data.Custom.RewardMagnitude(:,1)==BpodSystem.Data.Custom.RewardMagnitude(:,2);
+% trial types variance - 1 == highVar, 2==medVar, 3==lowVar --> varTableIdx
 
-
-%blockType %2 columns - 1 reward 2 variance
-blockTable=zeros(length(unique(BpodSystem.Data.Custom.BlockNumberL)),2);
-%left large = 1. right large=2, control=3
-%queries block index end of each block and the last trial of the session
-%for end block
-blockTable(leftLarge([blockIndex, nTrials-1]),1)=1;
-blockTable(rightLarge([blockIndex, nTrials-1]),1)=2;
-blockTable(controlMag([blockIndex, nTrials-1]),1)=3;
-
-%calculate variance
 if sum(BpodSystem.Data.Settings.GUI.BlockTable.NoiseL ~=0) && sum(BpodSystem.Data.Settings.GUI.BlockTable.NoiseR ~=0) 
-    for j=1:length(blockIndex)
-        if j==1
-            blockVar(1:blockIndex(j),:)=repmat(var(BpodSystem.Data.Custom.RewardMagnitude(1:blockIndex(j),:)),blockIndex(j),1);
-        elseif j==length(blockIndex)
-            blockVar(blockIndex(j)+1:nTrials-1,:)=repmat(var(BpodSystem.Data.Custom.RewardMagnitude(blockIndex(j)+1:nTrials-1,:)), (nTrials-1)-blockIndex(j),1);
-        else
-            blockVar(blockIndex(j-1)+1:blockIndex(j)+1,:)=repmat(var(BpodSystem.Data.Custom.RewardMagnitude(blockIndex(j-1)+1:blockIndex(j),:)), blockIndex(j)+1-blockIndex(j-1),1);
-        end 
-    end
-
     %var large = 1. var med=2, control=3
-    xx=blockVar([blockIndex, nTrials-1],:);
-
-    try
-        blockTable(:,2)=2; %default is medium trial - replace if highest var or control var
-        blockTable(sum(xx==max(max(xx)),2),2)=1;
-        blockTable(xx(:,1)==xx(:,2),2)=3;
-    catch
-        disp('Failed to caclulate variance')   
-    end
+    varTable=horzcat(BpodSystem.Data.TrialSettings(end).GUI.BlockTable.NoiseL, BpodSystem.Data.TrialSettings(end).GUI.BlockTable.NoiseR);
+    high=max(max(varTable));
+    low=min(min(varTable(varTable>0)));
+    
+    varTableIdx=ones(length(blockTable),2);
+    varTableIdx(varTableIdx==1)=2;
+    varTableIdx(varTable==high)=1;
+    varTableIdx(varTable==low)=3;
+    varTableIdx(varTable==0)=0;
+   
     
 else
-    blockTable(:,2)=nan;
+    varTableIdx=nan(length(blockTable),2);
     disp('no variance in reward blocks')
 end
 
@@ -192,11 +179,10 @@ if length(unique(BpodSystem.Data.Custom.BlockNumberL))>1
         try
             blockTransMat(1:length(completedTrials(blockIndex_omitNan(xi)-50:blockIndex_omitNan(xi)+60)),xi+1)=completedTrials(blockIndex_omitNan(xi)-50:blockIndex_omitNan(xi)+60);
         catch
-            if blockIndex_omitNan(xi)+60 > length(completedTrials)
-                disp(['not enough trials in block. only ' num2str(length(completedTrials)-blockIndex_omitNan(xi)) 'trials in block' num2str(xi+1) ])
-                %disp(['not enough trials in block. only ' nu2str(length(completedTrials)-blockIndex_omitNan(xi) 'trials in block' num2str(xi+1) ])
-            elseif blockIndex_omitNan(xi)-50 < 0
-                disp('not enough trials in block. Negative trials.')
+            if xi==length(blockIndex_omitNan)
+                blockTransMat(1:length(completedTrials(blockIndex_omitNan(xi)-50:end)),xi+1)=completedTrials(blockIndex_omitNan(xi)-50:end);
+            else
+                disp('error in calculating transition matrix')
             end
         end
     end
@@ -235,13 +221,14 @@ for i =1: length(unique(BpodSystem.Data.Custom.BlockNumberL))
     CompletedTrials = ~isnan(BpodSystem.Data.Custom.ChoiceLeft(1:end-1)) & BpodSystem.Data.Custom.BlockNumberL(1:length(BpodSystem.Data.Custom.ChoiceLeft(1:end-1)))==i;
     AudDV = ExperiencedDV(CompletedTrials);
     
-    CondColors={[0.8500, 0.3250, 0.0980], [0.9290, 0.6940, 0.1250], [0, 0.4470, 0.7410]};
+    CondColors={[0, 0.4470, 0.7410], [0.9290, 0.6940, 0.1250], [0.8500, 0.3250, 0.0980]};
 
     if ~isempty(AudDV)
             BinIdx = discretize(AudDV,linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,AudBin+1));
             PsycY = grpstats(ChoiceLeft(CompletedTrials),BinIdx,'mean');
             PsycX = grpstats(ExperiencedDV(CompletedTrials),BinIdx,'mean');
-            %plot(PsycX,PsycY,'ok','MarkerSize',6)
+            plot(PsycX,PsycY,'ok','MarkerSize',6, 'MarkerEdgeColor', CondColors{blockTable(i,1)})
+            hold on;
             XFit = linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100);
             YFit = glmval(glmfit(AudDV,ChoiceLeft(CompletedTrials)','binomial'),linspace(min(AudDV)-10*eps,max(AudDV)+10*eps,100),'logit');
             if length(unique(BpodSystem.Data.Custom.BlockNumberL))>1
@@ -259,6 +246,14 @@ end
 
 
 if ThereAreBlocks
+    numBlocks=BpodSystem.Data.Custom.BlockNumberL(end);
+%     if sum(BpodSystem.Data.Custom.BlockNumberL==BpodSystem.Data.Custom.BlockNumberL(end))<80
+%         numBlocks=numBlocks-1;
+%         disp('last block has insufficienttrials')
+%     end
+
+    blockTable=blockTable(1:numBlocks);
+    varTableIdx=varTableIdx(1:numBlocks,:);
     
     %psychometric avg across blocks
     subplot(3,3,[3])
@@ -266,13 +261,12 @@ if ThereAreBlocks
     hold on
     
     try
-    blockType=blockTable(:,1);
-    %control block == 3
-    [controlMeanX, controlMeanY]=avgPsyc(XBlock, YBlock, blockType, 3);
-    %leftLarge == 1
-    [LMeanX, LMeanY]=avgPsyc(XBlock, YBlock, blockType, 1);
-    %rightLarge == 2
-    [RMeanX, RMeanY]=avgPsyc(XBlock, YBlock, blockType, 2);
+    %control block == 1
+    [controlMeanX, controlMeanY]=avgPsyc(XBlock, YBlock, blockTable, 1);
+    %leftLarge == 2
+    [LMeanX, LMeanY]=avgPsyc(XBlock, YBlock, blockTable, 2);
+    %rightLarge == 3
+    [RMeanX, RMeanY]=avgPsyc(XBlock, YBlock, blockTable, 3);
     plot(controlMeanX, controlMeanY, 'color', CondColors{3},'linewidth',2)
     plot(LMeanX, LMeanY,'color',CondColors{1}, 'linewidth',2)
     plot(RMeanX, RMeanY,'color',CondColors{2}, 'linewidth',2)
@@ -281,6 +275,11 @@ if ThereAreBlocks
     end
 
     %plot avg. choice transition to control block
+     preBlock=vertcat(nan, blockTable(1:end-1));
+     prepostBlock=horzcat(preBlock, blockTable);
+
+          
+          
 %     title('control block transition')
 %     subplot(3,3,[6])
 %     [a,b] =size(blockTransMat);
@@ -289,74 +288,74 @@ if ThereAreBlocks
 %     xline(0)
 
     %plot avg. choice transition to high reward block
-    aa=histcounts(BpodSystem.Data.Custom.BlockNumberL);
+%     aa=histcounts(BpodSystem.Data.Custom.BlockNumberL);
+%     
+%     if sum(aa<60)>0
+%         disp('not enough trials in last block - no transition plotted')
+%     end
     
-    if sum(aa<100)>0
-        disp('not enough trials in last block - no transition plotted')
-    end
-    
-    blockTransMat_dummy=horzcat(blockTransMat(:,1),blockTransMat);
-    blockType_dummy=vertcat(0,blockType(aa>100));
-    preBlock_dummy=vertcat(0,blockType_dummy(1:end-1));
-    
-    leftHi2rightHi= blockType_dummy==2 & preBlock_dummy==1; %if the prev. block was left high
-    subplot(3,3,[9])
-    title('high to low transition')
-    [a,b] =size(blockTransMat_dummy);
-    x = linspace(-50,60,a);
-    plot(x,mean(movmean(blockTransMat_dummy(:,leftHi2rightHi),25),2,'omitnan'),'linewidth',2, 'DisplayName','L2R');
-    xline(0)
-    hold on;
-
-    control2rightHi=blockType_dummy==2 & preBlock_dummy==3; %control to left Hi
-    subplot(3,3,[6])
-    [a,b] =size(blockTransMat_dummy);
-    x = linspace(-50,60,a);
-    plot(x,mean(movmean(blockTransMat_dummy(:,control2rightHi),25),2,'omitnan'), 'linewidth',2, 'DisplayName','C2R');
-    xline(0)
-    hold on;
-    
-    
-    rightHi2leftHi= blockType_dummy==1 & preBlock_dummy==2; %if the prev. block was tight high
-    subplot(3,3,[9])
-    [a,b] =size(blockTransMat_dummy);
-    x = linspace(-50,60,a);
-    plot(x,mean(movmean(blockTransMat_dummy(:,rightHi2leftHi),25),2,'omitnan'), 'linewidth',2, 'DisplayName','R2L');
-    xline(0)
-    hold on;
-
-    control2leftHi=blockType_dummy==1 & preBlock_dummy==3; %control to left Hi
-    subplot(3,3,[6])
-    title('control block transition')
-    [a,b] =size(blockTransMat_dummy);
-    x = linspace(-50,60,a);
-    plot(x,mean(movmean(blockTransMat_dummy(:,control2leftHi),25),2,'omitnan'), 'linewidth',2, 'DisplayName','C2L');
-    xline(0)
-    hold on;
-    
-        
-        
-      
-           
-    leftHi2control=blockType_dummy==3 & blockType_dummy(find(blockType_dummy==3)-1)==1; %left hi to control
-    subplot(3,3,[6])
-    [a,b] =size(blockTransMat_dummy);
-    x = linspace(-50,60,a);
-    plot(x,mean(movmean(blockTransMat_dummy(:,leftHi2control),25),2,'omitnan'), 'linewidth',2,'DisplayName','L2C');
-    xline(0)
-    hold on;
-
-    rightHi2control=blockType_dummy==3 & blockType_dummy(find(blockType_dummy==3)-1)==2; %right hi to control
-    subplot(3,3,[6])
-    [a,b] =size(blockTransMat_dummy);
-    x = linspace(-50,60,a);
-    plot(x,mean(movmean(blockTransMat_dummy(:,rightHi2control),25),2,'omitnan'), 'linewidth',2,'DisplayName','R2C' );
-    xline(0)
-    hold on;
-
-
-    legend(subplot(3,3,[9]));
-    legend(subplot(3,3,[6]));
+%     blockTransMat_dummy=horzcat(blockTransMat(:,1),blockTransMat); %transition matrix for postBlock
+%     blockType_dummy=vertcat(0,blockTable(aa>100));
+%     postBlock_dummy=vertcat(0,blockType_dummy(1:end-1));
+%     
+%     leftHi2rightHi= blockType_dummy==2 & postBlock_dummy==3; %if the prev. block was left high
+%     subplot(3,3,[9])
+%     title('high to low transition')
+%     [a,b] =size(blockTransMat_dummy);
+%     x = linspace(-50,60,a);
+%     plot(x,mean(movmean(blockTransMat_dummy(:,leftHi2rightHi),25),2,'omitnan'),'linewidth',2, 'DisplayName','L2R');
+%     xline(0)
+%     hold on;
+% 
+%     control2rightHi=blockType_dummy==1 & postBlock_dummy==3; %control to right Hi
+%     subplot(3,3,[6])
+%     [a,b] =size(blockTransMat_dummy);
+%     x = linspace(-50,60,a);
+%     plot(x,mean(movmean(blockTransMat_dummy(:,control2rightHi),25),2,'omitnan'), 'linewidth',2, 'DisplayName','C2R');
+%     xline(0)
+%     hold on;
+%     
+%     
+%     rightHi2leftHi= blockType_dummy==1 & postBlock_dummy==2; %if the prev. block was tight high
+%     subplot(3,3,[9])
+%     [a,b] =size(blockTransMat_dummy);
+%     x = linspace(-50,60,a);
+%     plot(x,mean(movmean(blockTransMat_dummy(:,rightHi2leftHi),25),2,'omitnan'), 'linewidth',2, 'DisplayName','R2L');
+%     xline(0)
+%     hold on;
+% 
+%     control2leftHi=blockType_dummy==1 & postBlock_dummy==3; %control to left Hi
+%     subplot(3,3,[6])
+%     title('control block transition')
+%     [a,b] =size(blockTransMat_dummy);
+%     x = linspace(-50,60,a);
+%     plot(x,mean(movmean(blockTransMat_dummy(:,control2leftHi),25),2,'omitnan'), 'linewidth',2, 'DisplayName','C2L');
+%     xline(0)
+%     hold on;
+%     
+%         
+%         
+%       
+%            
+%     leftHi2control=blockType_dummy==3 & blockType_dummy(find(blockType_dummy==3)-1)==1; %left hi to control
+%     subplot(3,3,[6])
+%     [a,b] =size(blockTransMat_dummy);
+%     x = linspace(-50,60,a);
+%     plot(x,mean(movmean(blockTransMat_dummy(:,leftHi2control),25),2,'omitnan'), 'linewidth',2,'DisplayName','L2C');
+%     xline(0)
+%     hold on;
+% 
+%     rightHi2control=blockType_dummy==3 & blockType_dummy(find(blockType_dummy==3)-1)==2; %right hi to control
+%     subplot(3,3,[6])
+%     [a,b] =size(blockTransMat_dummy);
+%     x = linspace(-50,60,a);
+%     plot(x,mean(movmean(blockTransMat_dummy(:,rightHi2control),25),2,'omitnan'), 'linewidth',2,'DisplayName','R2C' );
+%     xline(0)
+%     hold on;
+% 
+% 
+%     legend(subplot(3,3,[9]));
+%     legend(subplot(3,3,[6]));
 
         
  
