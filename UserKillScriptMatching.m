@@ -126,14 +126,18 @@ global BpodSystem
 offline=false;
 if offline
     BpodSystem.Data=SessionData;
-    TaskParameters = SessionData.TrialSettings(1);
+    if isfield(SessionData,'TrialSettings')
+        TaskParameters = SessionData.TrialSettings(1);
+    else
+        TaskParameters = SessionData.Settings;
+    end
     Animal ='Unknown';
 else
     [~,Animal]=fileparts(fileparts(fileparts(fileparts(BpodSystem.DataPath))));
 end
 
 % correct feedback delay. weirdly (wrongly?!) done by TG in
-% updateCustomDataFields of Matching task. TO 10/2020
+%% updateCustomDataFields of Matching task. TO 10/2020
 nTrials=BpodSystem.Data.nTrials;
 TimeChoice = nan(1,nTrials);
 FeedbackDelay = nan(1,nTrials);
@@ -421,7 +425,7 @@ hold on
 %actual ITI lenghts
 ITI = nan(nTrials-1,1);
 for t = 1 : nTrials -1
-    ITI(t) = BpodSystem.Data.TrialStartTimestamp(t+1) - BpodSystem.Data.TrialStartTimestamp(t) - BpodSystem.Data.RawEvents.Trial{t}.States.ITI(1,1) + BpodSystem.Data.RawEvents.Trial{t}.States.PreITI(1,2);
+    ITI(t) = BpodSystem.Data.TrialStartTimestamp(t+1) - BpodSystem.Data.TrialStartTimestamp(t) + BpodSystem.Data.RawEvents.Trial{t+1}.States.PreITI(1,2) - BpodSystem.Data.RawEvents.Trial{t}.States.ITI(1,1);
 end
 cc=linspace(min(ITI),max(ITI),20);
 histogram(ITI,cc,'FaceColor',[.5,.5,.5],'EdgeColor',[1,1,1])

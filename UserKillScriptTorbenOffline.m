@@ -1,7 +1,7 @@
 %Behavior analysis Olf2AFC
 function UserKillScriptTorbenOffline()
 basepath = 'C:\Data\DataPostdoc\BpodData\';
-animal = 'TP50';
+animal = 'TP56';
 protocol = 'Dual2AFC';
 Sessions = getDir(fullfile(basepath,animal,protocol,'Session Data'),'file',animal);
 % SessionDataPath={'K:\BpodData\TP44\Dual2AFC\Session Data\TP44_Dual2AFC_Nov05_2019_Session1.mat';...
@@ -37,7 +37,8 @@ for s=1:length(Sessions)
     AllData.Custom.SessionIndex=[AllData.Custom.SessionIndex,s*ones(1,nT)];
 end
 
-AllData.Custom.ChoiceLeft(AllData.Custom.OriginalTrialIndex<50)=NaN;
+%exclude first trials per session?
+AllData.Custom.ChoiceLeft(AllData.Custom.OriginalTrialIndex<100)=NaN;
 AllData.nTrials=size(AllData.Custom.ChoiceLeft,2)+1;
 
 global TaskParameters
@@ -332,10 +333,15 @@ Rcatch=cell(1,2);Pcatch=cell(1,2);Rerror=cell(1,2);Perror=cell(1,2);
 %for confidence auc
 auc = nan(AudBinWT/2,length(LaserCond),1);
 auc_sem = nan(AudBinWT/2,length(LaserCond),1);
+auc_left = nan(AudBinWT/2,length(LaserCond),1);
+auc_left_sem = nan(AudBinWT/2,length(LaserCond),1);
+auc_right = nan(AudBinWT/2,length(LaserCond),1);
+auc_right_sem = nan(AudBinWT/2,length(LaserCond),1);
 for i =1:length(LaserCond)
     
     WTCatch = WT(CompletedTrials&CatchTrial&Correct==1&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
     DVCatch = ExperiencedDV(CompletedTrials&CatchTrial&Correct==1&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
+    ChoiceCatch = ChoiceLeft(CompletedTrials&CatchTrial&Correct==1&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
      if ~isempty(DVCatch)
         BinIdxCatch = discretize(DVCatch,DVEdge);
         if ~all(isnan(BinIdxCatch))
@@ -345,6 +351,7 @@ for i =1:length(LaserCond)
         end
         WTError = WT(CompletedTrials&Correct==0&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
         DVError = ExperiencedDV(CompletedTrials&Correct==0&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
+        ChoiceError = ChoiceLeft(CompletedTrials&Correct==0&WT>MinWT&WT<MaxWT  & LaserTrial==LaserCond(i));
         BinIdxError = discretize(DVError,DVEdge);
         if ~all(isnan(BinIdxError))
             WTErrorY = grpstats(WTError,BinIdxError,'mean');
@@ -367,9 +374,15 @@ for i =1:length(LaserCond)
             BinIdxCatch(BinIdxCatch==AudBinWT-d+1)=d;
             BinIdxError(BinIdxError==AudBinWT-d+1)=d;
         end
+        BinIdxCatchLeft = BinIdxCatch; BinIdxCatchLeft(ChoiceCatch==0)= NaN;
+        BinIdxErrorLeft = BinIdxError; BinIdxErrorLeft(ChoiceError==0)= NaN;
+        BinIdxCatchRight = BinIdxCatch; BinIdxCatchRight(ChoiceCatch==1)= NaN;
+        BinIdxErrorRight = BinIdxError; BinIdxErrorRight(ChoiceError==1)= NaN;        
             
         for d=1:(AudBinWT/2)
         [auc(d,i),~,auc_sem(d,i)] = rocarea_torben(WTCatch(BinIdxCatch==d),WTError(BinIdxError==d),'bootstrap',200);
+        [auc_left(d,i),~,auc_left_sem(d,i)] = rocarea_torben(WTCatch(BinIdxCatchLeft==d),WTError(BinIdxErrorLeft==d),'bootstrap',200);
+        [auc_right(d,i),~,auc_right_sem(d,i)] = rocarea_torben(WTCatch(BinIdxCatchRight==d),WTError(BinIdxErrorRight==d),'bootstrap',200);
         end
         
     end
@@ -449,6 +462,25 @@ for i =1:length(LaserCond)
 end
 xlabel('DV quantile')
 ylabel('AUC')
+
+%confidence index left
+subplot(3,4,9)
+hold on
+for i =1:length(LaserCond)
+    errorbar(1:size(auc_left,1),auc_left(end:-1:1,i),auc_left_sem(end:-1:1,i),'-o','MarkerFaceColor',CondColors{i},'MarkerEdgeColor',CondColors{i},'LineWidth',2,'Color',CondColors{i})
+end
+xlabel('DV quantile')
+ylabel('AUC LEFT')
+
+%confidence index right
+subplot(3,4,10)
+hold on
+for i =1:length(LaserCond)
+    errorbar(1:size(auc_right,1),auc_right(end:-1:1,i),auc_right_sem(end:-1:1,i),'-o','MarkerFaceColor',CondColors{i},'MarkerEdgeColor',CondColors{i},'LineWidth',2,'Color',CondColors{i})
+end
+xlabel('DV quantile')
+ylabel('AUC RIGHT')
+
 
 
 RedoTicks(gcf);
