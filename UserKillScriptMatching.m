@@ -2,6 +2,31 @@
 function UserKillScriptMatching
 
 global BpodSystem
+global TaskParameters
+
+%
+% for photometry sessions, put back single-trial data files into
+% Bpod struct for convenience
+if TaskParameters.GUI.Photometry
+    try
+    for i =1:BpodSystem.Data.nTrials
+        fname = fullfile(BpodSystem.DataPath(1:end-4),['NidaqData',num2str(i),'.mat']);
+        tmp=load(fname);
+        BpodSystem.Data.NidaqData{i}=tmp.NidaqData;
+        BpodSystem.Data.Nidaq2Data{i}=tmp.Nidaq2Data;
+    end
+    SaveBpodSessionData;
+    for i =1:BpodSystem.Data.nTrials
+        fname = fullfile(BpodSystem.DataPath(1:end-4),['NidaqData',num2str(i),'.mat']);
+        if exist(fname,'file')==2
+            delete(fname) %only delete AFTER saving bpod file in case sth goes wrong
+        end
+    end
+    rmdir(BpodSystem.DataPath(1:end-4))
+    catch
+        warning('Stitching single-trial photometry data back to SessionData failed.')
+    end
+end
 
 %load mail settings --> contains mail address & password & evernote e-mail address
 load('MailSettings.mat');%loads MailSettings struct
