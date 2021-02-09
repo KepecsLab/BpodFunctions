@@ -15,14 +15,26 @@ if TaskParameters.GUI.Photometry
         BpodSystem.Data.NidaqData{i}=tmp.NidaqData;
         BpodSystem.Data.Nidaq2Data{i}=tmp.Nidaq2Data;
     end
-    SaveBpodSessionData;
-    for i =1:BpodSystem.Data.nTrials
-        fname = fullfile(BpodSystem.DataPath(1:end-4),['NidaqData',num2str(i),'.mat']);
-        if exist(fname,'file')==2
-            delete(fname) %only delete AFTER saving bpod file in case sth goes wrong
+    
+    %save
+    SessionData = BpodSystem.Data;
+    fname = [BpodSystem.DataPath(1:end-4),'_stitch.mat'];
+    save(fname, 'SessionData', '-v6');
+    
+    
+    %double check if file exists and has reasonable size (there were issues
+    %with empty files)
+    f = dir(fname);
+    if ~isempty(f) && f.size/1000/1000 > 100 %larger than 100 MB
+        %-->delete pre-stitch files & folder
+        for i =1:BpodSystem.Data.nTrials
+            fname = fullfile(BpodSystem.DataPath(1:end-4),['NidaqData',num2str(i),'.mat']);
+            if exist(fname,'file')==2
+                delete(fname) %only delete AFTER saving bpod file in case sth goes wrong
+            end
         end
+        rmdir(BpodSystem.DataPath(1:end-4))
     end
-    rmdir(BpodSystem.DataPath(1:end-4))
     catch
         warning('Stitching single-trial photometry data back to SessionData failed.')
     end
