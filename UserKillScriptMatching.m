@@ -19,7 +19,7 @@ if TaskParameters.GUI.Photometry
     %save
     SessionData = BpodSystem.Data;
     fname = [BpodSystem.DataPath(1:end-4),'_stitch.mat'];
-    save(fname, 'SessionData', '-v6');
+    save(fname, 'SessionData', '-v7.3');
     
     
     %double check if file exists and has reasonable size (there were issues
