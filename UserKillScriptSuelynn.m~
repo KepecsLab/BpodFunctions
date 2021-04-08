@@ -94,7 +94,7 @@ function FigHandle = Analysis(SessionData)
 global TaskParameters
 global BpodSystem
 
-offline=false;
+offline=true;
     if offline
         BpodSystem.Data=SessionData;
         TaskParameters = SessionData.Settings;
