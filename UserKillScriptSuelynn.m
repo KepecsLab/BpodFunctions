@@ -272,10 +272,8 @@ if ThereAreBlocks
     catch
         disp('error in calculating average psychometric')
     end
+    
 
-    %plot avg. choice transition to control block
-     preBlock=vertcat(nan, blockTable(1:end-1));
-     prepostBlock=horzcat(preBlock, blockTable);
     
      %plot reward/block conditions for this session
      subplot(3,3,[6])
@@ -284,7 +282,7 @@ if ThereAreBlocks
      plot(1:length(BpodSystem.Data.Custom.RewardMagnitude(:,2)),BpodSystem.Data.Custom.RewardMagnitude(:,2))
      legend({'left','right'},'Location','northeast')
      
-     
+   if length(unique(varTable))>2   
     %plot block transitions
      subplot(3,3,[9])
      xline(50)
@@ -313,10 +311,15 @@ if ThereAreBlocks
                 end
             end
      end
-        
+     
+     try
      hold on; plot(mean(movmean(blockTransRich(:,idxHighVar+1),25,'omitnan'),2))
      hold on; plot(mean(movmean(blockTransRich(:,idxLowVar+1),25,'omitnan'),2))
      legend({'T','high','low'},'Location','northeast')
+     catch
+         disp('error in plotting block transitions')
+     end
+    end
      
           
 %     title('control block transition')

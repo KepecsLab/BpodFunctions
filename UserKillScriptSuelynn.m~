@@ -94,7 +94,7 @@ function FigHandle = Analysis(SessionData)
 global TaskParameters
 global BpodSystem
 
-offline=true;
+offline=false;
     if offline
         BpodSystem.Data=SessionData;
         TaskParameters = SessionData.Settings;
@@ -313,10 +313,13 @@ if ThereAreBlocks
                 end
             end
      end
-        
+     try
      hold on; plot(mean(movmean(blockTransRich(:,idxHighVar+1),25,'omitnan'),2))
      hold on; plot(mean(movmean(blockTransRich(:,idxLowVar+1),25,'omitnan'),2))
      legend({'T','high','low'},'Location','northeast')
+     catch
+         disp('error in calculating average psychometric')
+     end
      
           
 %     title('control block transition')
