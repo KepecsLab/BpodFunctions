@@ -281,7 +281,8 @@ if ThereAreBlocks
      hold on;
      plot(1:length(BpodSystem.Data.Custom.RewardMagnitude(:,2)),BpodSystem.Data.Custom.RewardMagnitude(:,2))
      legend({'left','right'},'Location','northeast')
-     
+    
+   try
    if length(unique(varTable))>2   
     %plot block transitions
      subplot(3,3,[9])
@@ -319,7 +320,12 @@ if ThereAreBlocks
      catch
          disp('error in plotting block transitions')
      end
-    end
+   
+   
+   end
+   catch
+       disp('error in plotting block transitions')
+   end
      
           
 %     title('control block transition')
