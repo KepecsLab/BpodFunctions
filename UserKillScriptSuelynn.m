@@ -89,7 +89,7 @@ end
 
 end
 
-function FigHandle = Analysis(SessionData)
+function [FigHandle,blockTransRich,idxHighVar, idxLowVar] = Analysis(SessionData)
 
 global TaskParameters
 global BpodSystem
@@ -136,7 +136,7 @@ blockTable=blockTable';
 
 % trial types variance - 1 == highVar, 2==medVar, 3==lowVar --> varTableIdx
 
-if sum(BpodSystem.Data.Settings.GUI.BlockTable.NoiseL ~=0) && sum(BpodSystem.Data.Settings.GUI.BlockTable.NoiseR ~=0) 
+if sum(BpodSystem.Data.Settings.GUI.BlockTable.NoiseL ~=0) || sum(BpodSystem.Data.Settings.GUI.BlockTable.NoiseR ~=0) 
     %var large = 1. var med=2, control=3
     varTable=horzcat(BpodSystem.Data.TrialSettings(end).GUI.BlockTable.NoiseL, BpodSystem.Data.TrialSettings(end).GUI.BlockTable.NoiseR);
     high=max(max(varTable));
@@ -172,14 +172,14 @@ if length(unique(BpodSystem.Data.Custom.BlockNumberL))>1
 
     end
 
-    blockTransMat=NaN(111, length(blockIndex_omitNan)+1);
+    blockTransMat=NaN(91, length(blockIndex_omitNan)+1);
 
     for xi=1:length(blockIndex_omitNan)
         try
-            blockTransMat(1:length(completedTrials(blockIndex_omitNan(xi)-50:blockIndex_omitNan(xi)+60)),xi+1)=completedTrials(blockIndex_omitNan(xi)-50:blockIndex_omitNan(xi)+60);
+            blockTransMat(1:length(completedTrials(blockIndex_omitNan(xi)-40:blockIndex_omitNan(xi)+50)),xi+1)=completedTrials(blockIndex_omitNan(xi)-40:blockIndex_omitNan(xi)+50);
         catch
             if xi==length(blockIndex_omitNan)
-                blockTransMat(1:length(completedTrials(blockIndex_omitNan(xi)-50:end)),xi+1)=completedTrials(blockIndex_omitNan(xi)-50:end);
+                blockTransMat(1:length(completedTrials(blockIndex_omitNan(xi)-40:end)),xi+1)=completedTrials(blockIndex_omitNan(xi)-40:end);
             else
                 disp('error in calculating transition matrix')
             end
@@ -272,8 +272,10 @@ if ThereAreBlocks
     catch
         disp('error in calculating average psychometric')
     end
-    
 
+    %plot avg. choice transition to control block
+     preBlock=vertcat(nan, blockTable(1:end-1));
+     prepostBlock=horzcat(preBlock, blockTable);
     
      %plot reward/block conditions for this session
      subplot(3,3,[6])
@@ -281,12 +283,11 @@ if ThereAreBlocks
      hold on;
      plot(1:length(BpodSystem.Data.Custom.RewardMagnitude(:,2)),BpodSystem.Data.Custom.RewardMagnitude(:,2))
      legend({'left','right'},'Location','northeast')
-    
-   try
-   if length(unique(varTable))>2   
+     
+     
     %plot block transitions
      subplot(3,3,[9])
-     xline(50)
+     %xline(50)
      hold on;
      
      idxHighVar=[find(varTableIdx(:,1)==1); find(varTableIdx(:,2)==1)];
@@ -295,38 +296,30 @@ if ThereAreBlocks
      completedTrialscopy=completedTrials;
      
      %flip right trials st pChoice --> pRichChoice
-     richChoice=BpodSystem.Data.Custom.RewardBase((~isnan(ChoiceLeft)),:);
-     richChoice= richChoice(:,1)>richChoice(:,2);
-     completedTrialscopy(richChoice==0)=~completedTrialscopy(richChoice==0);
+     %richChoice=BpodSystem.Data.Custom.RewardBase((~isnan(ChoiceLeft)),:);
+     %richChoice= richChoice(:,1)>richChoice(:,2);
+     %completedTrialscopy(richChoice==0)=~completedTrialscopy(richChoice==0);
      
-     blockTransRich=NaN(111, length(blockIndex_omitNan)+1);
+     blockTransRich=NaN(91, length(blockIndex_omitNan)+1);
 
      for xi=1:length(blockIndex_omitNan)
             try
-                blockTransRich(1:length(completedTrialscopy(blockIndex_omitNan(xi)-50:blockIndex_omitNan(xi)+60)),xi+1)=completedTrialscopy(blockIndex_omitNan(xi)-50:blockIndex_omitNan(xi)+60);
+                blockTransRich(1:length(completedTrialscopy(blockIndex_omitNan(xi)-40:blockIndex_omitNan(xi)+50)),xi+1)=completedTrialscopy(blockIndex_omitNan(xi)-40:blockIndex_omitNan(xi)+50);
             catch
                 if xi==length(blockIndex_omitNan)
-                    blockTransRich(1:length(completedTrialscopy(blockIndex_omitNan(xi)-50:end)),xi+1)=completedTrialscopy(blockIndex_omitNan(xi)-50:end);
+                    blockTransRich(1:length(completedTrialscopy(blockIndex_omitNan(xi)-40:end)),xi+1)=completedTrialscopy(blockIndex_omitNan(xi)-40:end);
                 else
                     disp('error in calculating transition matrix')
                 end
             end
      end
+        
+     hold on; plot(mean(movmean(blockTransRich(:,idxHighVar+1),30,'omitnan'),2))
+     hold on; plot(mean(movmean(blockTransRich(:,idxLowVar+1),30,'omitnan'),2))
      
-     try
-     hold on; plot(mean(movmean(blockTransRich(:,idxHighVar+1),25,'omitnan'),2))
-     hold on; plot(mean(movmean(blockTransRich(:,idxLowVar+1),25,'omitnan'),2))
-     legend({'T','high','low'},'Location','northeast')
-     catch
-         disp('error in plotting block transitions')
-     end
-   
-   
-   end
-   catch
-       disp('error in plotting block transitions')
-   end
-     
+     hold on; x=repmat(40,[10,1]); y=linspace(0,1,10); line(x,y);
+     legend({'high','low',''},'Location','northeast')
+
           
 %     title('control block transition')
 %     subplot(3,3,[6])
