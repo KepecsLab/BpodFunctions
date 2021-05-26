@@ -44,15 +44,15 @@
 	<address>rtsp://172.20.22.230:554/h264?username=admin&#38;password=123456</address>
 </rig>
 <rig>
-	<name>Kenna-rig</name>
+	<name>KepecsLab-K-Rig</name>
 	<address>rtsp://172.20.22.229:554/h264?username=admin&#38;password=123456</address>
 </rig>
 <rig>
-	<name>Lenny-rig</name>
+	<name>KepecsLab-L-Rig</name>
 	<address>rtsp://admin:123456@172.20.22.228:554/profile2/</address>
 </rig>
 <rig>
-	<name>Marilyn-rig</name>
+	<name>KepecsLab-M-Rig</name>
 	<address>rtsp://172.20.22.227:554/h264?username=admin&#38;password=123456</address>
 </rig>
 </rigs>
